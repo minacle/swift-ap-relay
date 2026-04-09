@@ -40,13 +40,18 @@ struct AdminAPIController: RouteCollection {
         subscriber.state = .accepted
         try await subscriber.save(on: req.db)
 
+        let logger = req.logger
         Task {
-            try await req.deliveryService.sendAccept(
-                to: subscriber.inboxURL,
-                followActivityID: subscriber.followActivityID,
-                followerActorID: subscriber.actorID,
-                followObjectURI: subscriber.followObjectURI
-            )
+            do {
+                try await req.deliveryService.sendAccept(
+                    to: subscriber.inboxURL,
+                    followActivityID: subscriber.followActivityID,
+                    followerActorID: subscriber.actorID,
+                    followObjectURI: subscriber.followObjectURI
+                )
+            } catch {
+                logger.error("Failed to send Accept to \(subscriber.inboxURL): \(error)")
+            }
         }
 
         return AdminResponse(status: "accepted", domain: domain)
@@ -67,13 +72,18 @@ struct AdminAPIController: RouteCollection {
         subscriber.state = .rejected
         try await subscriber.save(on: req.db)
 
+        let logger = req.logger
         Task {
-            try await req.deliveryService.sendReject(
-                to: subscriber.inboxURL,
-                followActivityID: subscriber.followActivityID,
-                followerActorID: subscriber.actorID,
-                followObjectURI: subscriber.followObjectURI
-            )
+            do {
+                try await req.deliveryService.sendReject(
+                    to: subscriber.inboxURL,
+                    followActivityID: subscriber.followActivityID,
+                    followerActorID: subscriber.actorID,
+                    followObjectURI: subscriber.followObjectURI
+                )
+            } catch {
+                logger.error("Failed to send Reject to \(subscriber.inboxURL): \(error)")
+            }
         }
 
         return AdminResponse(status: "rejected", domain: domain)

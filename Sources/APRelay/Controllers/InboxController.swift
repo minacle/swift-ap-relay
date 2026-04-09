@@ -147,13 +147,18 @@ struct InboxController: RouteCollection {
         req.logger.info("Follow from \(actorDomain), state: \(subscriber.state.rawValue)")
 
         if subscriber.state == .accepted {
+            let logger = req.logger
             Task {
-                try await req.deliveryService.sendAccept(
-                    to: inboxURL,
-                    followActivityID: activity.id,
-                    followerActorID: activity.actor,
-                    followObjectURI: objectURI
-                )
+                do {
+                    try await req.deliveryService.sendAccept(
+                        to: inboxURL,
+                        followActivityID: activity.id,
+                        followerActorID: activity.actor,
+                        followObjectURI: objectURI
+                    )
+                } catch {
+                    logger.error("Failed to send Accept to \(inboxURL): \(error)")
+                }
             }
         }
     }
@@ -257,10 +262,10 @@ struct InboxController: RouteCollection {
         let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
 
         guard
-            try await Subscriber.query(on: req.db)
+            let sender = try await Subscriber.query(on: req.db)
                 .filter(\.$domain == actorDomain)
                 .filter(\.$state == .accepted)
-                .first() != nil
+                .first()
         else {
             return
         }
@@ -270,17 +275,11 @@ struct InboxController: RouteCollection {
             .all()
         let inboxURLs = subscribers.map(\.inboxURL)
 
-        let senderInbox =
-            try await Subscriber.query(on: req.db)
-            .filter(\.$domain == actorDomain)
-            .first()?
-            .inboxURL
-
         Task {
             await req.deliveryService.broadcast(
                 activity: body,
                 to: inboxURLs,
-                excluding: senderInbox
+                excluding: sender.inboxURL
             )
         }
     }

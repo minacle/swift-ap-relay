@@ -21,7 +21,7 @@ public struct HTTPSignature: Sendable {
         body: Data,
         privateKey: _RSA.Signing.PrivateKey,
         keyID: String
-    ) -> [String: String] {
+    ) throws -> [String: String] {
         let date = formatHTTPDate(Date())
         let digest = "SHA-256=\(Data(SHA256.hash(data: body)).base64EncodedString())"
         let contentType = "application/activity+json"
@@ -37,7 +37,7 @@ public struct HTTPSignature: Sendable {
             ]
         )
 
-        let signatureData = try! privateKey.signature(
+        let signatureData = try privateKey.signature(
             for: Data(signingString.utf8),
             padding: .insecurePKCS1v1_5
         )

@@ -270,7 +270,7 @@ struct InboxTests {
     func invalidJSON() async throws {
         try await withApp(configure: testConfigure) { app in
             let body = Data("not json".utf8)
-            let sigHeaders = TestSigning.signedHeaders(body: body)
+            let sigHeaders = try TestSigning.signedHeaders(body: body)
             var headers = HTTPHeaders()
             for (name, value) in sigHeaders {
                 headers.add(name: name, value: value)

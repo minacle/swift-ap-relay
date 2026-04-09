@@ -205,7 +205,7 @@ actor DeliveryService {
         let host = url.host() ?? ""
         let keyID = "\(config.actorURL)#main-key"
 
-        let headers = httpSignature.sign(
+        let headers = try httpSignature.sign(
             method: "post",
             path: path,
             host: host,

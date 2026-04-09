@@ -1,3 +1,4 @@
+import Crypto
 import Vapor
 
 /// Middleware that validates the Bearer token for admin API endpoints.
@@ -16,7 +17,9 @@ struct AdminAuthMiddleware: AsyncMiddleware {
             throw Abort(.unauthorized, reason: "Missing Authorization header")
         }
 
-        guard bearer.token == config.adminToken else {
+        let tokenHash = SHA256.hash(data: Data(bearer.token.utf8))
+        let expectedHash = SHA256.hash(data: Data(config.adminToken.utf8))
+        guard tokenHash == expectedHash else {
             throw Abort(.unauthorized, reason: "Invalid admin token")
         }
 

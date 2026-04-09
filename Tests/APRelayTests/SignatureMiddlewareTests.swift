@@ -52,7 +52,7 @@ struct SignatureMiddlewareTests {
             let activity = TestSigning.makeFollowActivity()
             let data = try JSONEncoder().encode(activity)
 
-            let sigHeaders = HTTPSignature().sign(
+            let sigHeaders = try HTTPSignature().sign(
                 method: "post",
                 path: "/inbox",
                 host: "localhost",

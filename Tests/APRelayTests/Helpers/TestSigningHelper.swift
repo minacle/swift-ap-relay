@@ -21,8 +21,8 @@ enum TestSigning {
         host: String = "localhost",
         body: Data,
         keyID: String = "\(testActorID)#main-key"
-    ) -> [String: String] {
-        httpSignature.sign(
+    ) throws -> [String: String] {
+        try httpSignature.sign(
             method: "post",
             path: path,
             host: host,
@@ -125,7 +125,7 @@ enum TestSigning {
         host: String = "localhost"
     ) throws -> (headers: HTTPHeaders, body: ByteBuffer) {
         let data = try JSONEncoder().encode(activity)
-        let sigHeaders = signedHeaders(path: path, host: host, body: data)
+        let sigHeaders = try signedHeaders(path: path, host: host, body: data)
         var headers = HTTPHeaders()
         for (name, value) in sigHeaders {
             headers.add(name: name, value: value)

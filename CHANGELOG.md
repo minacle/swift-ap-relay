@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Use constant-time comparison for admin token authentication via SHA256 digest equality
+
+### Fixed
+
+- Replace `try!` with `throws` in HTTP signature signing to prevent server crashes
+- Add error logging for fire-and-forget delivery tasks (Accept/Reject) that previously swallowed errors silently
+- Remove redundant database query in activity forwarding by reusing initial subscriber lookup
+- Change Subscriber model `state` property from `@Enum` to `@Field` to match string-typed migration and ensure PostgreSQL compatibility
+
 ### Added
 
 - ActivityPub relay server with HTTP Signature verification (draft-cavage-http-signatures-06)

@@ -22,7 +22,7 @@ final class Subscriber: Model, @unchecked Sendable {
     @Field(key: "actor_id")
     var actorID: String
 
-    @Enum(key: "state")
+    @Field(key: "state")
     var state: SubscriberState
 
     @Field(key: "follow_activity_id")
