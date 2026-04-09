@@ -1,0 +1,22 @@
+x-shared_environment: &shared_environment
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+  RELAY_DOMAIN: ${RELAY_DOMAIN:?RELAY_DOMAIN is required}
+  RELAY_SCHEME: ${RELAY_SCHEME:-https}
+  DATABASE_URL: ${DATABASE_URL:-sqlite:relay.sqlite}
+  ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+  MANUAL_ACCEPT: ${MANUAL_ACCEPT:-false}
+  RESTRICTED_MODE: ${RESTRICTED_MODE:-false}
+
+services:
+  app:
+    build: .
+    ports:
+      - "${RELAY_PORT:-8080}:8080"
+    environment:
+      <<: *shared_environment
+    volumes:
+      - relay-data:/app/data
+    command: ["serve", "--hostname", "0.0.0.0", "--port", "8080"]
+
+volumes:
+  relay-data:
