@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Refactor DeliveryService to AsyncStream-based work queue with structured concurrency and graceful shutdown via Vapor LifecycleHandler
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
 
 ### Fixed

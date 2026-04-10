@@ -48,6 +48,7 @@ func configure(_ app: Application) async throws {
         privateKey: privateKey,
         logger: app.logger
     )
+    app.lifecycle.use(app.deliveryService)
 
     // Register admin commands.
     app.asyncCommands.use(ListSubscribersCommand(), as: "list-subscribers")

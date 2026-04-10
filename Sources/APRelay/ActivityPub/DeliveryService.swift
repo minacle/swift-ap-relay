@@ -1,6 +1,5 @@
 import APRelayCore
 import _CryptoExtras
-import Dispatch
 import Foundation
 import Logging
 import Metrics
@@ -8,12 +7,12 @@ import Tracing
 import Vapor
 
 /// Service for delivering signed ActivityPub activities to remote inboxes.
-actor DeliveryService {
+actor DeliveryService: LifecycleHandler {
     private let client: Client
     private let config: RelayConfiguration
     private let privateKey: _RSA.Signing.PrivateKey
     private let httpSignature = HTTPSignature()
-    private let logger: Logger
+    nonisolated let logger: Logger
 
     private static let maxRetries = 5
 
@@ -28,9 +27,10 @@ actor DeliveryService {
     )
     private let deliveryDuration = Metrics.Timer(label: "relay_delivery_duration_seconds")
 
-    // Graceful shutdown: track in-flight tasks.
-    private var inFlightCount = 0
-    private var shutdownContinuation: CheckedContinuation<Void, Never>?
+    // Work queue
+    private nonisolated let workStream: AsyncStream<WorkItem>
+    private nonisolated let workContinuation: AsyncStream<WorkItem>.Continuation
+    private var workTask: Task<Void, Never>?
 
     init(
         client: Client,
@@ -38,17 +38,124 @@ actor DeliveryService {
         privateKey: _RSA.Signing.PrivateKey,
         logger: Logger
     ) {
+        let (stream, continuation) = AsyncStream<WorkItem>.makeStream()
+        self.workStream = stream
+        self.workContinuation = continuation
         self.client = client
         self.config = config
         self.privateKey = privateKey
         self.logger = logger
     }
 
+    // MARK: - LifecycleHandler
+
+    nonisolated func didBootAsync(_ application: Application) async throws {
+        let task = Task {
+            await withDiscardingTaskGroup { group in
+                for await work in self.workStream {
+                    group.addTask {
+                        await self.process(work)
+                    }
+                }
+            }
+        }
+        await self.run { $0.workTask = task }
+    }
+
+    nonisolated func shutdownAsync(_ application: Application) async {
+        workContinuation.finish()
+        let task = await self.run { $0.workTask }
+        await task?.value
+    }
+
+    // MARK: - Enqueue (nonisolated, non-blocking)
+
+    nonisolated func enqueueAccept(
+        to inboxURL: String,
+        followActivityID: String,
+        followerActorID: String,
+        followObjectURI: String?
+    ) {
+        workContinuation.yield(
+            .accept(
+                inboxURL: inboxURL,
+                followActivityID: followActivityID,
+                followerActorID: followerActorID,
+                followObjectURI: followObjectURI
+            )
+        )
+    }
+
+    nonisolated func enqueueReject(
+        to inboxURL: String,
+        followActivityID: String,
+        followerActorID: String,
+        followObjectURI: String?
+    ) {
+        workContinuation.yield(
+            .reject(
+                inboxURL: inboxURL,
+                followActivityID: followActivityID,
+                followerActorID: followerActorID,
+                followObjectURI: followObjectURI
+            )
+        )
+    }
+
+    nonisolated func enqueueBroadcast(
+        activity: Data,
+        to inboxURLs: [String],
+        excluding origin: String? = nil
+    ) {
+        workContinuation.yield(
+            .broadcast(
+                activity: activity,
+                inboxURLs: inboxURLs,
+                excluding: origin
+            )
+        )
+    }
+
+    // MARK: - Work Processing
+
+    private func process(_ work: WorkItem) async {
+        switch work {
+        case .accept(let inboxURL, let followActivityID, let followerActorID, let followObjectURI):
+            do {
+                try await sendAccept(
+                    to: inboxURL,
+                    followActivityID: followActivityID,
+                    followerActorID: followerActorID,
+                    followObjectURI: followObjectURI
+                )
+            } catch {
+                logger.error("Failed to send Accept to \(inboxURL): \(error)")
+            }
+        case .reject(let inboxURL, let followActivityID, let followerActorID, let followObjectURI):
+            do {
+                try await sendReject(
+                    to: inboxURL,
+                    followActivityID: followActivityID,
+                    followerActorID: followerActorID,
+                    followObjectURI: followObjectURI
+                )
+            } catch {
+                logger.error("Failed to send Reject to \(inboxURL): \(error)")
+            }
+        case .broadcast(let activity, let inboxURLs, let excluding):
+            await broadcastDelivery(activity: activity, to: inboxURLs, excluding: excluding)
+        }
+    }
+
+    // MARK: - Delivery
+
     /// Delivers a JSON-encoded activity to a single inbox with retry.
-    func deliver(activity: Data, to inboxURL: String) async {
+    private func deliver(activity: Data, to inboxURL: String) async {
         let start = DispatchTime.now()
 
         for attempt in 0...Self.maxRetries {
+            if Task.isCancelled { break }
+
             if attempt > 0 {
                 let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
                 try? await Task.sleep(nanoseconds: delay)
@@ -79,30 +186,31 @@ actor DeliveryService {
                 )
             }
         }
-        deliveryFailureCounter.increment()
-        deliveryDuration.recordInterval(since: start)
-        logger.error("Delivery exhausted retries for \(inboxURL)")
+        if Task.isCancelled {
+            deliveryDuration.recordInterval(since: start)
+            logger.info("Delivery cancelled for \(inboxURL)")
+        } else {
+            deliveryFailureCounter.increment()
+            deliveryDuration.recordInterval(since: start)
+            logger.error("Delivery exhausted retries for \(inboxURL)")
+        }
     }
 
     /// Whether a failed HTTP status code is worth retrying.
     private func shouldRetry(statusCode: UInt) -> Bool {
         if (400...499).contains(statusCode) {
-            // Only retry specific client errors that may be transient.
             return [401, 408, 429].contains(statusCode)
         }
         return true
     }
 
     /// Delivers an activity to multiple inboxes in parallel, excluding the specified origin.
-    func broadcast(
+    private func broadcastDelivery(
         activity: Data,
         to inboxURLs: [String],
         excluding origin: String? = nil
     ) async {
-        inFlightCount += 1
-        defer { taskCompleted() }
-
-        await withTaskGroup { group in
+        await withDiscardingTaskGroup { group in
             for inbox in inboxURLs where inbox != origin {
                 group.addTask {
                     await self.deliver(activity: activity, to: inbox)
@@ -111,21 +219,7 @@ actor DeliveryService {
         }
     }
 
-    /// Waits for all in-flight deliveries to complete.
-    func waitForInFlight() async {
-        guard inFlightCount > 0 else { return }
-        await withCheckedContinuation { continuation in
-            shutdownContinuation = continuation
-        }
-    }
-
-    private func taskCompleted() {
-        inFlightCount -= 1
-        if inFlightCount == 0, let continuation = shutdownContinuation {
-            shutdownContinuation = nil
-            continuation.resume()
-        }
-    }
+    // MARK: - Accept / Reject
 
     /// Sends an Accept activity in response to a Follow.
     func sendAccept(
@@ -227,6 +321,32 @@ actor DeliveryService {
         }
     }
 }
+
+// MARK: - WorkItem
+
+extension DeliveryService {
+    enum WorkItem: Sendable {
+        case accept(
+            inboxURL: String,
+            followActivityID: String,
+            followerActorID: String,
+            followObjectURI: String?
+        )
+        case reject(
+            inboxURL: String,
+            followActivityID: String,
+            followerActorID: String,
+            followObjectURI: String?
+        )
+        case broadcast(
+            activity: Data,
+            inboxURLs: [String],
+            excluding: String?
+        )
+    }
+}
+
+// MARK: - DeliveryError
 
 enum DeliveryError: Error {
     case invalidURL(String)

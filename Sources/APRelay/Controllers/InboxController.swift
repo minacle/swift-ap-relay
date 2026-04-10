@@ -147,19 +147,12 @@ struct InboxController: RouteCollection {
         req.logger.info("Follow from \(actorDomain), state: \(subscriber.state.rawValue)")
 
         if subscriber.state == .accepted {
-            let logger = req.logger
-            Task {
-                do {
-                    try await req.deliveryService.sendAccept(
-                        to: inboxURL,
-                        followActivityID: activity.id,
-                        followerActorID: activity.actor,
-                        followObjectURI: objectURI
-                    )
-                } catch {
-                    logger.error("Failed to send Accept to \(inboxURL): \(error)")
-                }
-            }
+            req.deliveryService.enqueueAccept(
+                to: inboxURL,
+                followActivityID: activity.id,
+                followerActorID: activity.actor,
+                followObjectURI: objectURI
+            )
         }
     }
 
@@ -239,13 +232,11 @@ struct InboxController: RouteCollection {
 
         let announceData = try JSONEncoder().encode(announce)
 
-        Task {
-            await req.deliveryService.broadcast(
-                activity: announceData,
-                to: inboxURLs,
-                excluding: subscriber.inboxURL
-            )
-        }
+        req.deliveryService.enqueueBroadcast(
+            activity: announceData,
+            to: inboxURLs,
+            excluding: subscriber.inboxURL
+        )
 
         req.logger.info(
             "Relaying \(activity.type) from \(actorDomain) to \(inboxURLs.count - 1) subscribers"
@@ -275,13 +266,11 @@ struct InboxController: RouteCollection {
             .all()
         let inboxURLs = subscribers.map(\.inboxURL)
 
-        Task {
-            await req.deliveryService.broadcast(
-                activity: body,
-                to: inboxURLs,
-                excluding: sender.inboxURL
-            )
-        }
+        req.deliveryService.enqueueBroadcast(
+            activity: body,
+            to: inboxURLs,
+            excluding: sender.inboxURL
+        )
     }
 
     // MARK: - Helpers
