@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct RejectCommand: AsyncCommand {
@@ -10,27 +9,14 @@ struct RejectCommand: AsyncCommand {
     var help: String { "Reject a pending subscriber" }
 
     func run(using context: CommandContext, signature: Signature) async throws {
-        let app = context.application
-
-        guard
-            let subscriber = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == signature.domain)
-                .first()
-        else {
-            context.console.print("Subscriber not found: \(signature.domain)")
-            return
+        do {
+            let client = try AdminAPIClient(app: context.application)
+            let response = try await client.rejectSubscriber(domain: signature.domain)
+            context.console.print("Rejected: \(response.domain)")
+        } catch let error as AdminAPIError {
+            context.console.error(error.description)
+        } catch {
+            context.console.error("Unexpected error: \(error)")
         }
-
-        subscriber.state = .rejected
-        try await subscriber.save(on: app.db)
-
-        try await app.deliveryService.sendReject(
-            to: subscriber.inboxURL,
-            followActivityID: subscriber.followActivityID,
-            followerActorID: subscriber.actorID,
-            followObjectURI: subscriber.followObjectURI
-        )
-
-        context.console.print("Rejected: \(signature.domain)")
     }
 }

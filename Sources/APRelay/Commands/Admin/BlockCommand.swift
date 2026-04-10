@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct BlockCommand: AsyncCommand {
@@ -13,28 +12,19 @@ struct BlockCommand: AsyncCommand {
     var help: String { "Block a domain" }
 
     func run(using context: CommandContext, signature: Signature) async throws {
-        let app = context.application
-
-        let existing = try await BlockedDomain.query(on: app.db)
-            .filter(\.$domain == signature.domain)
-            .first()
-
-        if existing != nil {
-            context.console.print("Domain already blocked: \(signature.domain)")
-            return
+        do {
+            let client = try AdminAPIClient(app: context.application)
+            let response = try await client.blockDomain(
+                signature.domain,
+                reason: signature.reason
+            )
+            context.console.print("Blocked: \(response.domain)")
+        } catch let error as AdminAPIError where error.isConflict {
+            context.console.error("Domain already blocked: \(signature.domain)")
+        } catch let error as AdminAPIError {
+            context.console.error(error.description)
+        } catch {
+            context.console.error("Unexpected error: \(error)")
         }
-
-        let blocked = BlockedDomain(domain: signature.domain, reason: signature.reason)
-        try await blocked.save(on: app.db)
-
-        if let subscriber = try await Subscriber.query(on: app.db)
-            .filter(\.$domain == signature.domain)
-            .first()
-        {
-            try await subscriber.delete(on: app.db)
-            context.console.print("Removed existing subscriber: \(signature.domain)")
-        }
-
-        context.console.print("Blocked: \(signature.domain)")
     }
 }

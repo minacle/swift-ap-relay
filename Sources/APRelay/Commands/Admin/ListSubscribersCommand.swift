@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct ListSubscribersCommand: AsyncCommand {
@@ -10,20 +9,27 @@ struct ListSubscribersCommand: AsyncCommand {
     var help: String { "List all subscribers" }
 
     func run(using context: CommandContext, signature: Signature) async throws {
-        var query = Subscriber.query(on: context.application.db)
-        if let state = signature.state, let filter = SubscriberState(rawValue: state) {
-            query = query.filter(\.$state == filter)
+        if let state = signature.state, SubscriberState(rawValue: state) == nil {
+            context.console.error("Invalid state: \(state). Must be one of: pending, accepted, rejected")
+            return
         }
 
-        let subscribers = try await query.all()
-        if subscribers.isEmpty {
-            context.console.print("No subscribers found.")
-        } else {
-            for subscriber in subscribers {
-                context.console.print(
-                    "\(subscriber.domain)\t\(subscriber.state.rawValue)\t\(subscriber.inboxURL)"
-                )
+        do {
+            let client = try AdminAPIClient(app: context.application)
+            let subscribers = try await client.listSubscribers(state: signature.state)
+            if subscribers.isEmpty {
+                context.console.print("No subscribers found.")
+            } else {
+                for subscriber in subscribers {
+                    context.console.print(
+                        "\(subscriber.domain)\t\(subscriber.state.rawValue)\t\(subscriber.inboxURL)"
+                    )
+                }
             }
+        } catch let error as AdminAPIError {
+            context.console.error(error.description)
+        } catch {
+            context.console.error("Unexpected error: \(error)")
         }
     }
 }

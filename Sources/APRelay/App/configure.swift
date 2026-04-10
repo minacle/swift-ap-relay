@@ -56,6 +56,7 @@ func configure(_ app: Application) async throws {
     app.asyncCommands.use(RejectCommand(), as: "reject")
     app.asyncCommands.use(BlockCommand(), as: "block")
     app.asyncCommands.use(UnblockCommand(), as: "unblock")
+    app.asyncCommands.use(ListBlockedDomainsCommand(), as: "list-blocked-domains")
 
     // Register routes.
     try routes(app)

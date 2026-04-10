@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct AcceptCommand: AsyncCommand {
@@ -10,34 +9,14 @@ struct AcceptCommand: AsyncCommand {
     var help: String { "Accept a pending subscriber" }
 
     func run(using context: CommandContext, signature: Signature) async throws {
-        let app = context.application
-
-        guard
-            let subscriber = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == signature.domain)
-                .first()
-        else {
-            context.console.print("Subscriber not found: \(signature.domain)")
-            return
+        do {
+            let client = try AdminAPIClient(app: context.application)
+            let response = try await client.acceptSubscriber(domain: signature.domain)
+            context.console.print("Accepted: \(response.domain)")
+        } catch let error as AdminAPIError {
+            context.console.error(error.description)
+        } catch {
+            context.console.error("Unexpected error: \(error)")
         }
-
-        guard subscriber.state == .pending else {
-            context.console.print(
-                "Subscriber is not pending (current state: \(subscriber.state.rawValue))"
-            )
-            return
-        }
-
-        subscriber.state = .accepted
-        try await subscriber.save(on: app.db)
-
-        try await app.deliveryService.sendAccept(
-            to: subscriber.inboxURL,
-            followActivityID: subscriber.followActivityID,
-            followerActorID: subscriber.actorID,
-            followObjectURI: subscriber.followObjectURI
-        )
-
-        context.console.print("Accepted: \(signature.domain)")
     }
 }

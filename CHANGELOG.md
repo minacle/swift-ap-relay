@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Refactor admin CLI commands (accept, reject, block, unblock, list-subscribers) to use Admin REST API client instead of direct database access
 - Refactor DeliveryService to AsyncStream-based work queue with structured concurrency and graceful shutdown via Vapor LifecycleHandler
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
 
@@ -34,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Subscriber management with pending/accepted/rejected states and manual accept mode
 - Domain blocking and restricted mode (allowlist) support
 - Admin REST API with Bearer token authentication
-- Admin CLI commands: list-subscribers, accept, reject, block, unblock
+- Admin CLI commands: list-subscribers, accept, reject, block, unblock, list-blocked-domains
+- AdminAPIClient HTTP client for admin CLI commands to communicate with the relay server via REST API
 - Delivery service with exponential backoff retry and smart error classification
 - WebFinger, NodeInfo 2.1, and actor endpoint for federation discovery
 - RSA-4096 key pair generation and database storage
