@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
 - `RELAY_URL` in docker-compose now defaults to `http://127.0.0.1:8080` instead of requiring the variable to be set
 - Deploy workflow uses native ARM64 runners (`ubuntu-24.04-arm`) for arm64 Docker builds instead of QEMU emulation
+- Deploy workflow migrated to `docker/github-builder` reusable workflow for simplified multi-platform build, digest management, and manifest merging
 
 ### Removed
 
