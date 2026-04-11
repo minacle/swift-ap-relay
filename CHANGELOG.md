@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `HTTPSignature.verify()` no longer accepts an unused `body` parameter
 - Actor fetch Accept header now uses spec-compliant `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` with `application/activity+json` fallback
 - Replace `ISO8601DateFormatter` with `Date.ISO8601FormatStyle` in RedisRelayRepository, removing `nonisolated(unsafe)` static property
 - Mark `@preconcurrency import RediStack` with `@unsafe` to acknowledge memory safety implications under strict checking
@@ -56,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix digest mismatch (401) on incoming POST requests by explicitly collecting the request body in signature verification middleware; Vapor's route-level body collection runs after middleware, so `request.body.data` was nil for streamed requests
 - Fix crash on startup when Redis connection pools are not yet available during `configure()` by deferring signing key initialization to lifecycle boot hook
 - Replace `try!` with `throws` in HTTP signature signing to prevent server crashes
 - Add error logging for fire-and-forget delivery tasks (Accept/Reject) that previously swallowed errors silently

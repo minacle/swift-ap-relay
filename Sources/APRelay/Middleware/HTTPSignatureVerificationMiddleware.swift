@@ -1,4 +1,5 @@
 import APRelayCore
+import Crypto
 import _CryptoExtras
 import Vapor
 
@@ -32,9 +33,12 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
             }
         }
 
-        // Validate Digest header matches body.
-        let body = request.body.data ?? ByteBuffer()
-        let bodyData = Data(buffer: body)
+        // Collect the body from the stream. Middleware runs before Vapor's
+        // route-level body collection, so request.body.data is nil for
+        // streamed requests.
+        let bodyBuffer = try await request.body.collect(
+            max: request.application.routes.defaultMaxBodySize.value
+        ).get() ?? ByteBuffer()
 
         if request.method == .POST {
             guard let digest = request.headers.first(name: "Digest") else {
@@ -45,7 +49,7 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
                 throw Abort(.unauthorized, reason: "Unsupported digest algorithm")
             }
             let expectedHash = String(digest.dropFirst(expectedPrefix.count))
-            let actualHash = Data(Crypto.SHA256.hash(data: bodyData)).base64EncodedString()
+            let actualHash = Data(SHA256.hash(data: bodyBuffer.readableBytesView)).base64EncodedString()
             if expectedHash != actualHash {
                 throw Abort(.unauthorized, reason: "Digest mismatch")
             }
@@ -80,7 +84,6 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
             method: method,
             path: path,
             requestHeaders: headerMap,
-            body: bodyData,
             components: components,
             publicKeyPEM: publicKeyPEM
         )

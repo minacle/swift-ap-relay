@@ -249,7 +249,6 @@ struct HTTPSignatureTests {
             method: "get",
             path: "/users/test",
             requestHeaders: headers,
-            body: Data(),
             components: components,
             publicKeyPEM: publicKeyPEM
         )

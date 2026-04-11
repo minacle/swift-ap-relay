@@ -156,7 +156,6 @@ public struct HTTPSignature: Sendable {
         method: String,
         path: String,
         requestHeaders: [String: String],
-        body: Data,
         components: SignatureComponents,
         publicKeyPEM: String
     ) throws(SignatureError) -> Bool {
