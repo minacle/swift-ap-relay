@@ -1,15 +1,15 @@
 import Foundation
 
 /// A flexible ActivityPub activity representation.
-public struct APActivity: Codable, Sendable {
-    public let context: APContext?
-    public let id: String
-    public let type: String
-    public let actor: String
-    public let object: APObject?
-    public let to: APStringOrArray?
-    public let cc: APStringOrArray?
-    public let published: String?
+package struct APActivity: Codable, Sendable {
+    package let context: APContext?
+    package let id: String
+    package let type: String
+    package let actor: String
+    package let object: APObject?
+    package let to: APStringOrArray?
+    package let cc: APStringOrArray?
+    package let published: String?
 
     enum CodingKeys: String, CodingKey {
         case context = "@context"
@@ -22,7 +22,7 @@ public struct APActivity: Codable, Sendable {
         case published
     }
 
-    public init(
+    package init(
         context: APContext?,
         id: String,
         type: String,
@@ -42,7 +42,7 @@ public struct APActivity: Codable, Sendable {
         self.published = published
     }
 
-    public init(from decoder: any Decoder) throws {
+    package init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         context = try container.decodeIfPresent(APContext.self, forKey: .context)
         id = try container.decode(String.self, forKey: .id)
@@ -68,12 +68,12 @@ private struct APActorRef: Decodable {
 }
 
 /// An ActivityPub object that can be either a URI string or a full object.
-public indirect enum APObject: Codable, Sendable {
+package indirect enum APObject: Codable, Sendable {
     case uri(String)
     case activity(APActivity)
     case object(APGenericObject)
 
-    public func encode(to encoder: any Encoder) throws {
+    package func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .uri(let uri):
@@ -85,7 +85,7 @@ public indirect enum APObject: Codable, Sendable {
         }
     }
 
-    public init(from decoder: any Decoder) throws {
+    package init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let uri = try? container.decode(String.self) {
             self = .uri(uri)
@@ -98,7 +98,7 @@ public indirect enum APObject: Codable, Sendable {
     }
 
     /// Returns the URI string if this is a URI, or the `id` if it's an object.
-    public var uriOrID: String? {
+    package var uriOrID: String? {
         switch self {
         case .uri(let uri): uri
         case .activity(let activity): activity.id
@@ -108,27 +108,27 @@ public indirect enum APObject: Codable, Sendable {
 }
 
 /// A generic ActivityPub object with common fields.
-public struct APGenericObject: Codable, Sendable {
-    public let id: String?
-    public let type: String?
-    public let actor: String?
-    public let content: String?
-    public let attributedTo: String?
+package struct APGenericObject: Codable, Sendable {
+    package let id: String?
+    package let type: String?
+    package let actor: String?
+    package let content: String?
+    package let attributedTo: String?
 }
 
 /// A value that can be a single string or an array of strings (common in ActivityPub).
-public enum APStringOrArray: Codable, Sendable {
+package enum APStringOrArray: Codable, Sendable {
     case single(String)
     case array([String])
 
-    public var values: [String] {
+    package var values: [String] {
         switch self {
         case .single(let value): [value]
         case .array(let values): values
         }
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    package func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .single(let value):
@@ -138,7 +138,7 @@ public enum APStringOrArray: Codable, Sendable {
         }
     }
 
-    public init(from decoder: any Decoder) throws {
+    package init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(String.self) {
             self = .single(value)
@@ -149,7 +149,7 @@ public enum APStringOrArray: Codable, Sendable {
     }
 
     /// Whether this contains the ActivityPub Public collection URI.
-    public var isPublic: Bool {
+    package var isPublic: Bool {
         values.contains("https://www.w3.org/ns/activitystreams#Public")
             || values.contains("as:Public")
             || values.contains("Public")

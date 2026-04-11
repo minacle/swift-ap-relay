@@ -3,18 +3,18 @@ import _CryptoExtras
 import Foundation
 
 /// HTTP Signature implementation based on draft-cavage-http-signatures-06.
-public struct HTTPSignature: Sendable {
+package struct HTTPSignature: Sendable {
     /// Headers to include when signing outgoing requests.
-    public let signedHeaders = [
+    package let signedHeaders = [
         "(request-target)", "host", "date", "digest", "content-type",
     ]
 
-    public init() {}
+    package init() {}
 
     // MARK: - Signing
 
     /// Signs an outgoing HTTP request and returns the headers to attach as key-value pairs.
-    public func sign(
+    package func sign(
         method: String,
         path: String,
         host: String,
@@ -66,7 +66,7 @@ public struct HTTPSignature: Sendable {
     /// GET requests have no body, so `Digest` and `Content-Type` are omitted
     /// from the signed headers. Only `(request-target)`, `host`, and `date`
     /// are signed, matching the convention used by Mastodon, Misskey, and Pleroma.
-    public func signGET(
+    package func signGET(
         path: String,
         host: String,
         privateKey: _RSA.Signing.PrivateKey,
@@ -108,7 +108,7 @@ public struct HTTPSignature: Sendable {
     // MARK: - Verification
 
     /// Parses a `Signature` header and returns its components.
-    public func parseSignatureHeader(_ header: String) -> SignatureComponents? {
+    package func parseSignatureHeader(_ header: String) -> SignatureComponents? {
         var keyID: String?
         var headers: [String]?
         var signature: String?
@@ -152,7 +152,7 @@ public struct HTTPSignature: Sendable {
     /// Verifies an incoming request signature against the provided public key PEM.
     ///
     /// - Parameter requestHeaders: Header name-value pairs (case-insensitive lookup performed internally).
-    public func verify(
+    package func verify(
         method: String,
         path: String,
         requestHeaders: [String: String],
@@ -204,11 +204,11 @@ public struct HTTPSignature: Sendable {
         return f
     }()
 
-    public func formatHTTPDate(_ date: Date) -> String {
+    package func formatHTTPDate(_ date: Date) -> String {
         Self.dateFormatter.string(from: date)
     }
 
-    public func parseHTTPDate(_ string: String) -> Date? {
+    package func parseHTTPDate(_ string: String) -> Date? {
         Self.dateFormatter.date(from: string)
     }
 
@@ -244,19 +244,19 @@ public struct HTTPSignature: Sendable {
 }
 
 /// Errors that can occur during HTTP signature verification.
-public enum SignatureError: Error {
+package enum SignatureError: Error {
     case invalidBase64
     case invalidPublicKey
 }
 
 /// Parsed HTTP Signature header components.
-public struct SignatureComponents: Sendable {
-    public let keyID: String
-    public let headers: [String]
-    public let signature: String
-    public let algorithm: String
+package struct SignatureComponents: Sendable {
+    package let keyID: String
+    package let headers: [String]
+    package let signature: String
+    package let algorithm: String
 
-    public init(keyID: String, headers: [String], signature: String, algorithm: String) {
+    package init(keyID: String, headers: [String], signature: String, algorithm: String) {
         self.keyID = keyID
         self.headers = headers
         self.signature = signature

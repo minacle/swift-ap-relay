@@ -3,7 +3,7 @@ extension Actor {
     ///
     /// Works like `@MainActor.run { }` but for any actor instance.
     @inline(always)
-    public func run<T: Sendable, E: Error>(
+    package func run<T: Sendable, E: Error>(
         body: @Sendable (isolated Self) throws(E) -> T
     ) async throws(E) -> T {
         try body(self)

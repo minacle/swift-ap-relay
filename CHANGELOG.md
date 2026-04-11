@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Narrow APRelayCore access control from `public` to `package` since all consumers are within the same Swift package
 - Restructure logging levels for relay operations: subscription state changes (follow, unfollow, accept, reject) use `notice`, routine operations and security-audit traces (received, delivered, duplicate, non-subscriber, unsupported type) use `info`
 - Add missing logs to `handleForward` for non-subscriber rejection and successful forwarding
 - `HTTPSignature.verify()` no longer accepts an unused `body` parameter

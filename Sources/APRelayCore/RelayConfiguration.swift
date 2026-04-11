@@ -4,25 +4,25 @@ import Foundation
 ///
 /// A pure value type with no framework dependencies. The caller is responsible
 /// for populating values from environment variables, .env files, etc.
-public struct RelayConfiguration: Sendable {
-    public let baseURL: String
-    public let domain: String
-    public let redisURL: String
-    public let adminToken: String
-    public let manualAccept: Bool
-    public let restrictedMode: Bool
-    public let relayDescription: String
-    public let relayFooter: String
+package struct RelayConfiguration: Sendable {
+    package let baseURL: String
+    package let domain: String
+    package let redisURL: String
+    package let adminToken: String
+    package let manualAccept: Bool
+    package let restrictedMode: Bool
+    package let relayDescription: String
+    package let relayFooter: String
 
-    public var actorURL: String {
+    package var actorURL: String {
         "\(baseURL)/actor"
     }
 
-    public var inboxURL: String {
+    package var inboxURL: String {
         "\(baseURL)/inbox"
     }
 
-    public init(
+    package init(
         baseURL: String,
         redisURL: String = "redis://localhost:6379",
         adminToken: String = "",

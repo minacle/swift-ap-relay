@@ -1,17 +1,17 @@
 import Foundation
 
 /// JSON-LD `@context` that can be either a single string or an array of strings.
-public enum APContext: Codable, Sendable {
+package enum APContext: Codable, Sendable {
     case single(String)
     case array([String])
 
-    public static let activityStreams = "https://www.w3.org/ns/activitystreams"
-    public static let securityV1 = "https://w3id.org/security/v1"
+    package static let activityStreams = "https://www.w3.org/ns/activitystreams"
+    package static let securityV1 = "https://w3id.org/security/v1"
 
     /// Default context for relay actor and outgoing activities.
-    public static let `default` = APContext.array([activityStreams, securityV1])
+    package static let `default` = APContext.array([activityStreams, securityV1])
 
-    public func encode(to encoder: any Encoder) throws {
+    package func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .single(let value):
@@ -21,7 +21,7 @@ public enum APContext: Codable, Sendable {
         }
     }
 
-    public init(from decoder: any Decoder) throws {
+    package init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let value = try? container.decode(String.self) {
             self = .single(value)

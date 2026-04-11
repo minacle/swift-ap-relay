@@ -1,16 +1,16 @@
 import Foundation
 
 /// ActivityPub Actor representation for the relay.
-public struct APActor: Codable, Sendable {
-    public let context: APContext
-    public let id: String
-    public let type: String
-    public let preferredUsername: String
-    public let name: String
-    public let summary: String
-    public let inbox: String
-    public let url: String
-    public let publicKey: APPublicKey
+package struct APActor: Codable, Sendable {
+    package let context: APContext
+    package let id: String
+    package let type: String
+    package let preferredUsername: String
+    package let name: String
+    package let summary: String
+    package let inbox: String
+    package let url: String
+    package let publicKey: APPublicKey
 
     enum CodingKeys: String, CodingKey {
         case context = "@context"
@@ -24,7 +24,7 @@ public struct APActor: Codable, Sendable {
         case publicKey
     }
 
-    public init(
+    package init(
         context: APContext,
         id: String,
         type: String,
@@ -48,14 +48,14 @@ public struct APActor: Codable, Sendable {
 }
 
 /// Remote actor fetched for signature verification.
-public struct RemoteActor: Codable, Sendable {
-    public let id: String
-    public let type: String?
-    public let inbox: String?
-    public let endpoints: RemoteActorEndpoints?
-    public let publicKey: APPublicKey?
+package struct RemoteActor: Codable, Sendable {
+    package let id: String
+    package let type: String?
+    package let inbox: String?
+    package let endpoints: RemoteActorEndpoints?
+    package let publicKey: APPublicKey?
 
-    public init(
+    package init(
         id: String,
         type: String?,
         inbox: String?,
@@ -70,16 +70,16 @@ public struct RemoteActor: Codable, Sendable {
     }
 
     /// The shared inbox URL, if available.
-    public var sharedInbox: String? {
+    package var sharedInbox: String? {
         endpoints?.sharedInbox
     }
 }
 
 /// Endpoints block from a remote actor document.
-public struct RemoteActorEndpoints: Codable, Sendable {
-    public let sharedInbox: String?
+package struct RemoteActorEndpoints: Codable, Sendable {
+    package let sharedInbox: String?
 
-    public init(sharedInbox: String?) {
+    package init(sharedInbox: String?) {
         self.sharedInbox = sharedInbox
     }
 }
