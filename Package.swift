@@ -12,7 +12,6 @@ let package = Package(
         .package(url: "https://github.com/vapor/queues-redis-driver.git", from: "1.1.0"),
         .package(url: "https://github.com/vapor/queues.git", from: "1.12.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0" ..< "5.0.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),
         .package(url: "https://github.com/swift-server/swift-prometheus.git", from: "2.0.0"),
         .package(url: "https://github.com/vapor/leaf.git", from: "4.4.0"),
     ],
@@ -22,7 +21,6 @@ let package = Package(
             dependencies: [
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
-                .product(name: "Collections", package: "swift-collections"),
             ]
         ),
         .executableTarget(

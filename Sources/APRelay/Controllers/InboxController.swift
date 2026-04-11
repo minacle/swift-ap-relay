@@ -37,7 +37,7 @@ struct InboxController: RouteCollection {
         }
 
         // Duplicate detection.
-        if await ActivityDeduplicator.shared.isDuplicate(activity.id) {
+        if try await req.activityDeduplicator.isDuplicate(activity.id) {
             req.logger.debug("Duplicate activity ignored: \(activity.id)")
             return .accepted
         }

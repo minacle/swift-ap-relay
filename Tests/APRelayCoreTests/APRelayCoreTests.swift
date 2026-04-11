@@ -226,23 +226,3 @@ struct HTTPDateFormatterTests {
         #expect(date != nil)
     }
 }
-
-@Suite("ActivityDeduplicator Tests")
-struct ActivityDeduplicatorTests {
-    @Test("Detects duplicates")
-    func detectsDuplicates() async {
-        let dedup = ActivityDeduplicator(maxSize: 100, ttl: 60)
-        let first = await dedup.isDuplicate("activity-1")
-        #expect(!first)
-        let second = await dedup.isDuplicate("activity-1")
-        #expect(second)
-    }
-
-    @Test("Different IDs are not duplicates")
-    func differentIDs() async {
-        let dedup = ActivityDeduplicator(maxSize: 100, ttl: 60)
-        _ = await dedup.isDuplicate("activity-1")
-        let result = await dedup.isDuplicate("activity-2")
-        #expect(!result)
-    }
-}

@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- In-memory ActivityDeduplicator actor and `swift-collections` dependency (replaced by Redis-backed deduplication)
 - `RELAY_DOMAIN`, `RELAY_SCHEME`, `RELAY_HOST`, `RELAY_PORT` environment variables (replaced by `RELAY_URL`)
 - Manual HTTP server hostname/port configuration from `configure.swift`
 - Fluent ORM, SQLite driver, and PostgreSQL driver dependencies
@@ -61,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared inbox (`endpoints.sharedInbox`) support for efficient delivery
 - Flexible JSON-LD `@context` decoding for mixed arrays (Pleroma format)
 - Flexible `actor` field decoding (string or object with `id`)
-- Activity deduplication via LRU cache with TTL
+- Activity deduplication via Redis with atomic SET NX EX and automatic TTL expiration
 - Subscriber management with pending/accepted/rejected states and manual accept mode
 - Domain blocking and restricted mode (allowlist) support
 - Admin REST API with Bearer token authentication
