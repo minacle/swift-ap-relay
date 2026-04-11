@@ -17,38 +17,39 @@ jobs:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    continue-on-error: ${{ contains(matrix.os, 'macos') }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
+        os: [ubuntu-22.04, ubuntu-24.04, macos-15, macos-26]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install swiftly and Swift (Linux)
         if: runner.os == 'Linux'
         run: |
-          curl -O https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz
-          tar zxf swiftly-$(uname -m).tar.gz
-          ./swiftly init -y --skip-install
+          curl -L https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz > swiftly.tar.gz
+          tar zxf swiftly.tar.gz
+          ./swiftly init --assume-yes --skip-install
           . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
           hash -r
           swiftly install --post-install-file=post-install.sh
           if [ -f post-install.sh ]; then
-            chmod u+x post-install.sh && sudo ./post-install.sh
+            sudo bash post-install.sh
           fi
           echo "PATH=$PATH" >> "$GITHUB_ENV"
 
       - name: Install swiftly and Swift (macOS)
         if: runner.os == 'macOS'
         run: |
-          curl -O https://download.swift.org/swiftly/darwin/swiftly.pkg
+          curl -L https://download.swift.org/swiftly/darwin/swiftly.pkg > swiftly.pkg
           installer -pkg swiftly.pkg -target CurrentUserHomeDirectory
-          ~/.swiftly/bin/swiftly init -y --skip-install
+          ~/.swiftly/bin/swiftly init --assume-yes --skip-install
           . "${SWIFTLY_HOME_DIR:-$HOME/.swiftly}/env.sh"
           hash -r
           swiftly install --post-install-file=post-install.sh
           if [ -f post-install.sh ]; then
-            chmod u+x post-install.sh && sudo ./post-install.sh
+            . post-install.sh
           fi
           echo "PATH=$PATH" >> "$GITHUB_ENV"
 

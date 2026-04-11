@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - GitHub Actions test workflow with swiftly-based Swift toolchain management across Ubuntu and macOS runners
+- Allow-failure for macOS CI jobs pending upstream swift-configuration fix (apple/swift-configuration#178)
 - `.swift-version` file for consistent Swift toolchain pinning via swiftly
 - AdminConnection struct for CLI admin commands to specify custom API endpoint via `--url`, `--hostname`, `--port`, `--tls`, or `--unix-socket` flags
 - Leaf templating engine for server-side HTML rendering with `index.leaf` template
