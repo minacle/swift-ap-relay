@@ -1,5 +1,4 @@
-import Foundation
-@preconcurrency import RediStack
+@preconcurrency @unsafe import RediStack
 import Vapor
 
 /// Redis-backed implementation of ``RelayRepository``.
@@ -15,18 +14,14 @@ import Vapor
 struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
     let redis: any RedisClient
 
-    nonisolated(unsafe) private static let dateFormatter: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
+    private static let dateFormatStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     private func formatDate(_ date: Date) -> String {
-        Self.dateFormatter.string(from: date)
+        date.formatted(Self.dateFormatStyle)
     }
 
     private func parseDate(_ string: String) -> Date? {
-        Self.dateFormatter.date(from: string)
+        try? Self.dateFormatStyle.parse(string)
     }
 
     // MARK: - Key Helpers

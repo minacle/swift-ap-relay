@@ -1,4 +1,4 @@
-@preconcurrency import RediStack
+@preconcurrency @unsafe import RediStack
 import Vapor
 
 /// Redis-backed implementation of ``ActivityDeduplicating``.

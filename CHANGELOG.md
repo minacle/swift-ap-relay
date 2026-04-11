@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Strict memory safety checking (SE-0458) enabled for all targets via `.strictMemorySafety()` swift setting
 - GitHub Actions deploy workflow for multi-platform Docker image builds (amd64/arm64) pushed to GitHub Container Registry
 - GitHub Actions test workflow with swiftly-based Swift toolchain management across Ubuntu and macOS runners
 - Allow-failure for macOS CI jobs pending upstream swift-configuration fix (apple/swift-configuration#178)
@@ -23,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace `ISO8601DateFormatter` with `Date.ISO8601FormatStyle` in RedisRelayRepository, removing `nonisolated(unsafe)` static property
+- Mark `@preconcurrency import RediStack` with `@unsafe` to acknowledge memory safety implications under strict checking
 - Replace inline HTML generation in IndexController with Leaf template rendering
 - Rewrite Dockerfile to follow Vapor recommended template with jemalloc, build caching, non-root user, and resource staging
 - Remove Redis MULTI/EXEC transaction wrapping from subscriber save and delete operations

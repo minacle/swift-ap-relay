@@ -21,7 +21,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
-            ]
+            ],
+            swiftSettings: [.strictMemorySafety()]
         ),
         .executableTarget(
             name: "APRelay",
@@ -31,11 +32,13 @@ let package = Package(
                 .product(name: "QueuesRedisDriver", package: "queues-redis-driver"),
                 .product(name: "Prometheus", package: "swift-prometheus"),
                 .product(name: "Leaf", package: "leaf"),
-            ]
+            ],
+            swiftSettings: [.strictMemorySafety()]
         ),
         .testTarget(
             name: "APRelayCoreTests",
-            dependencies: ["APRelayCore"]
+            dependencies: ["APRelayCore"],
+            swiftSettings: [.strictMemorySafety()]
         ),
         .testTarget(
             name: "APRelayTests",
@@ -43,7 +46,8 @@ let package = Package(
                 "APRelay",
                 .product(name: "VaporTesting", package: "vapor"),
                 .product(name: "XCTQueues", package: "queues"),
-            ]
+            ],
+            swiftSettings: [.strictMemorySafety()]
         ),
     ],
     swiftLanguageModes: [.v6]
