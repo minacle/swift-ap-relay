@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Remove Redis MULTI/EXEC transaction wrapping from subscriber save and delete operations
 - Replace Fluent ORM (SQLite/PostgreSQL) with Redis as the sole data store
 - Replace custom AsyncStream-based DeliveryService with Vapor Queues for persistent, concurrency-controlled delivery
 - Broadcast delivery now dispatches individual jobs per inbox, with concurrency naturally limited by queue workerCount

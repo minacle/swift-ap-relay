@@ -90,55 +90,38 @@ struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
             createdAt = subscriber.createdAt.map { formatDate($0) } ?? now
         }
 
-        // Use MULTI/EXEC for atomic update.
-        _ = try await redis.send(command: "MULTI").get()
-        do {
-            let fields: [String: RESPValue] = [
-                "inboxURL": .init(from: subscriber.inboxURL),
-                "actorID": .init(from: subscriber.actorID),
-                "state": .init(from: subscriber.state.rawValue),
-                "followActivityID": .init(from: subscriber.followActivityID),
-                "followObjectURI": .init(from: subscriber.followObjectURI ?? ""),
-                "createdAt": .init(from: createdAt),
-                "updatedAt": .init(from: now),
-            ]
-            _ = try await redis.hmset(fields, in: key).get()
-            _ = try await redis.sadd(subscriber.domain, to: allSubscribersKey).get()
+        let fields: [String: RESPValue] = [
+            "inboxURL": .init(from: subscriber.inboxURL),
+            "actorID": .init(from: subscriber.actorID),
+            "state": .init(from: subscriber.state.rawValue),
+            "followActivityID": .init(from: subscriber.followActivityID),
+            "followObjectURI": .init(from: subscriber.followObjectURI ?? ""),
+            "createdAt": .init(from: createdAt),
+            "updatedAt": .init(from: now),
+        ]
+        _ = try await redis.hmset(fields, in: key).get()
+        _ = try await redis.sadd(subscriber.domain, to: allSubscribersKey).get()
 
-            // Move between state sets if state changed.
-            if let old = existingState, old != subscriber.state.rawValue,
-                let oldState = SubscriberState(rawValue: old)
-            {
-                _ = try await redis.srem(subscriber.domain, from: stateSetKey(oldState)).get()
-            }
-            _ = try await redis.sadd(subscriber.domain, to: stateSetKey(subscriber.state)).get()
-
-            _ = try await redis.send(command: "EXEC").get()
-        } catch {
-            _ = try? await redis.send(command: "DISCARD").get()
-            throw error
+        // Move between state sets if state changed.
+        if let old = existingState, old != subscriber.state.rawValue,
+            let oldState = SubscriberState(rawValue: old)
+        {
+            _ = try await redis.srem(subscriber.domain, from: stateSetKey(oldState)).get()
         }
+        _ = try await redis.sadd(subscriber.domain, to: stateSetKey(subscriber.state)).get()
     }
 
     func deleteSubscriber(domain: String) async throws {
         let stateValue = try await redis.hget("state", from: subscriberKey(domain)).get().string
 
-        _ = try await redis.send(command: "MULTI").get()
-        do {
-            _ = try await redis.send(
-                command: "DEL",
-                with: [.init(from: subscriberKey(domain).rawValue)]
-            ).get()
-            _ = try await redis.srem(domain, from: allSubscribersKey).get()
+        _ = try await redis.send(
+            command: "DEL",
+            with: [.init(from: subscriberKey(domain).rawValue)]
+        ).get()
+        _ = try await redis.srem(domain, from: allSubscribersKey).get()
 
-            if let stateRaw = stateValue, let state = SubscriberState(rawValue: stateRaw) {
-                _ = try await redis.srem(domain, from: stateSetKey(state)).get()
-            }
-
-            _ = try await redis.send(command: "EXEC").get()
-        } catch {
-            _ = try? await redis.send(command: "DISCARD").get()
-            throw error
+        if let stateRaw = stateValue, let state = SubscriberState(rawValue: stateRaw) {
+            _ = try await redis.srem(domain, from: stateSetKey(state)).get()
         }
     }
 
