@@ -32,10 +32,10 @@ func configure(_ app: Application) async throws {
         app.queues.add(RejectJob())
     }
 
-    // Initialize signing key.
-    let keyManager = KeyManager(repository: app.repository)
-    let privateKey = try await keyManager.getOrCreatePrivateKey()
-    app.signingKey = privateKey
+    // Initialize signing key after Redis pools are ready.
+    // Must be registered after `app.redis.configuration` so that
+    // Redis's lifecycle handler (which creates connection pools) runs first.
+    app.lifecycle.use(SigningKeyBootstrap())
 
     // Start queue workers in non-testing environments.
     if app.environment != .testing {
@@ -55,6 +55,16 @@ func configure(_ app: Application) async throws {
 
     // Register routes.
     try routes(app)
+}
+
+// MARK: - Signing Key Lifecycle Bootstrap
+
+private struct SigningKeyBootstrap: LifecycleHandler {
+    func didBootAsync(_ application: Application) async throws {
+        let keyManager = KeyManager(repository: application.repository)
+        let privateKey = try await keyManager.getOrCreatePrivateKey()
+        application.signingKey = privateKey
+    }
 }
 
 // MARK: - App Storage for RelayConfiguration

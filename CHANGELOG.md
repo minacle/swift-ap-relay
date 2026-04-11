@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix crash on startup when Redis connection pools are not yet available during `configure()` by deferring signing key initialization to lifecycle boot hook
 - Replace `try!` with `throws` in HTTP signature signing to prevent server crashes
 - Add error logging for fire-and-forget delivery tasks (Accept/Reject) that previously swallowed errors silently
 - Remove redundant database query in activity forwarding by reusing initial subscriber lookup
