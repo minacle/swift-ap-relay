@@ -1,3 +1,5 @@
+import Crypto
+import _CryptoExtras
 import Foundation
 import Testing
 @testable import APRelayCore
@@ -203,6 +205,55 @@ struct HTTPSignatureTests {
     func parseMalformed() {
         let components = httpSignature.parseSignatureHeader("not a valid header")
         #expect(components == nil)
+    }
+
+    @Test("signGET returns Host, Date, Signature headers without Digest or Content-Type")
+    func signGETHeaders() throws {
+        let privateKey = try _RSA.Signing.PrivateKey(keySize: .bits2048)
+        let headers = try httpSignature.signGET(
+            path: "/users/test",
+            host: "example.com",
+            privateKey: privateKey,
+            keyID: "https://relay.example/actor#main-key"
+        )
+
+        #expect(headers["Host"] == "example.com")
+        #expect(headers["Date"] != nil)
+        #expect(headers["Signature"] != nil)
+        #expect(headers["Digest"] == nil)
+        #expect(headers["Content-Type"] == nil)
+
+        // Verify signed headers list in Signature value.
+        let sig = try #require(headers["Signature"])
+        #expect(sig.contains("headers=\"(request-target) host date\""))
+        #expect(sig.contains("algorithm=\"rsa-sha256\""))
+        #expect(sig.contains("keyId=\"https://relay.example/actor#main-key\""))
+    }
+
+    @Test("signGET signature verifies with public key")
+    func signGETRoundTrip() throws {
+        let privateKey = try _RSA.Signing.PrivateKey(keySize: .bits2048)
+        let publicKeyPEM = privateKey.publicKey.pemRepresentation
+
+        let headers = try httpSignature.signGET(
+            path: "/users/test",
+            host: "example.com",
+            privateKey: privateKey,
+            keyID: "https://relay.example/actor#main-key"
+        )
+
+        let sig = try #require(headers["Signature"])
+        let components = try #require(httpSignature.parseSignatureHeader(sig))
+
+        let isValid = try httpSignature.verify(
+            method: "get",
+            path: "/users/test",
+            requestHeaders: headers,
+            body: Data(),
+            components: components,
+            publicKeyPEM: publicKeyPEM
+        )
+        #expect(isValid)
     }
 }
 

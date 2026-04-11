@@ -64,6 +64,12 @@ private struct SigningKeyBootstrap: LifecycleHandler {
         let keyManager = KeyManager(repository: application.repository)
         let privateKey = try await keyManager.getOrCreatePrivateKey()
         application.signingKey = privateKey
+
+        let keyID = "\(application.relayConfig.actorURL)#main-key"
+        application.actorFetcher = HTTPActorFetcher(
+            privateKey: privateKey,
+            keyID: keyID
+        )
     }
 }
 

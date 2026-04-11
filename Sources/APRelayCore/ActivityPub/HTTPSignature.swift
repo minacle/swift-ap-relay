@@ -59,6 +59,52 @@ public struct HTTPSignature: Sendable {
         ]
     }
 
+    // MARK: - GET Signing
+
+    /// Signs an outgoing HTTP GET request and returns the headers to attach.
+    ///
+    /// GET requests have no body, so `Digest` and `Content-Type` are omitted
+    /// from the signed headers. Only `(request-target)`, `host`, and `date`
+    /// are signed, matching the convention used by Mastodon, Misskey, and Pleroma.
+    public func signGET(
+        path: String,
+        host: String,
+        privateKey: _RSA.Signing.PrivateKey,
+        keyID: String
+    ) throws -> [String: String] {
+        let date = formatHTTPDate(Date())
+        let getSignedHeaders = ["(request-target)", "host", "date"]
+
+        let signingString = buildSigningString(
+            method: "get",
+            path: path,
+            headerNames: getSignedHeaders,
+            headers: [
+                "host": host,
+                "date": date,
+            ]
+        )
+
+        let signatureData = try privateKey.signature(
+            for: Data(signingString.utf8),
+            padding: .insecurePKCS1v1_5
+        )
+        let signatureBase64 = signatureData.rawRepresentation.base64EncodedString()
+
+        let headersList = getSignedHeaders.joined(separator: " ")
+        let signatureHeader =
+            "keyId=\"\(keyID)\","
+            + "algorithm=\"rsa-sha256\","
+            + "headers=\"\(headersList)\","
+            + "signature=\"\(signatureBase64)\""
+
+        return [
+            "Host": host,
+            "Date": date,
+            "Signature": signatureHeader,
+        ]
+    }
+
     // MARK: - Verification
 
     /// Parses a `Signature` header and returns its components.

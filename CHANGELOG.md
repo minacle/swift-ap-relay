@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Signed HTTP GET requests for remote actor fetching, enabling compatibility with Mastodon Authorized Fetch (Secure Mode) and Pleroma `authorized_fetch_mode`
+- `HTTPSignature.signGET()` method for signing GET requests with `(request-target)`, `host`, and `date` headers
 - Strict memory safety checking (SE-0458) enabled for all targets via `.strictMemorySafety()` swift setting
 - GitHub Actions deploy workflow for multi-platform Docker image builds (amd64/arm64) pushed to GitHub Container Registry
 - GitHub Actions test workflow with swiftly-based Swift toolchain management across Ubuntu and macOS runners
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Actor fetch Accept header now uses spec-compliant `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` with `application/activity+json` fallback
 - Replace `ISO8601DateFormatter` with `Date.ISO8601FormatStyle` in RedisRelayRepository, removing `nonisolated(unsafe)` static property
 - Mark `@preconcurrency import RediStack` with `@unsafe` to acknowledge memory safety implications under strict checking
 - Replace inline HTML generation in IndexController with Leaf template rendering
