@@ -21,8 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
-    env:
-      VERBOSE: ${{ runner.debug && '-v' || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,10 +56,10 @@ jobs:
         run: swift --version
 
       - name: Resolve dependencies
-        run: swift package resolve ${{ env.VERBOSE }}
+        run: swift package resolve ${RUNNER_DEBUG:+-v}
 
       - name: Build
-        run: swift build ${{ env.VERBOSE }}
+        run: swift build ${RUNNER_DEBUG:+-v}
 
       - name: Test
-        run: swift test ${{ env.VERBOSE }}
+        run: swift test ${RUNNER_DEBUG:+-v}
