@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `admin` command group: admin CLI commands (`accept`, `reject`, `block`, `unblock`, `list-subscribers`, `list-blocked-domains`) are now subcommands under `APRelay admin` instead of top-level commands
 - Signed HTTP GET requests for remote actor fetching, enabling compatibility with Mastodon Authorized Fetch (Secure Mode) and Pleroma `authorized_fetch_mode`
 - `HTTPSignature.signGET()` method for signing GET requests with `(request-target)`, `host`, and `date` headers
 - Strict memory safety checking (SE-0458) enabled for all targets via `.strictMemorySafety()` swift setting
@@ -42,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidate `RELAY_DOMAIN`, `RELAY_SCHEME`, `RELAY_HOST`, `RELAY_PORT` into single `RELAY_URL` environment variable
 - Refactor admin CLI commands (accept, reject, block, unblock, list-subscribers) to use Admin REST API client instead of direct database access
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
+- Skip Redis connection and signing key initialization for non-serve commands (`admin`, `--help`), so CLI commands work without a running Redis instance
 - `RELAY_URL` in docker-compose now defaults to `http://127.0.0.1:8080` instead of requiring the variable to be set
 - Deploy workflow uses native ARM64 runners (`ubuntu-24.04-arm`) for arm64 Docker builds instead of QEMU emulation
 - Deploy workflow migrated to `docker/github-builder` reusable workflow for simplified multi-platform build, digest management, and manifest merging

@@ -32,23 +32,25 @@ func configure(_ app: Application) async throws {
         app.queues.add(RejectJob())
     }
 
-    // Initialize signing key after Redis pools are ready.
-    // Must be registered after `app.redis.configuration` so that
-    // Redis's lifecycle handler (which creates connection pools) runs first.
-    app.lifecycle.use(SigningKeyBootstrap())
+    // Server-only setup: signing key and in-process queue workers require
+    // a live Redis connection at boot, so only register them for `serve`.
+    let args = app.environment.commandInput.arguments
+    let isHelp = args.contains("--help") || args.contains("-h")
+    let commandName = args.first ?? "serve"
+    if commandName == "serve" && !isHelp {
+        // Initialize signing key after Redis pools are ready.
+        // Must be registered after `app.redis.configuration` so that
+        // Redis's lifecycle handler (which creates connection pools) runs first.
+        app.lifecycle.use(SigningKeyBootstrap())
 
-    // Start queue workers in non-testing environments.
-    if app.environment != .testing {
-        try app.queues.startInProcessJobs()
+        // Start queue workers in non-testing environments.
+        if app.environment != .testing {
+            try app.queues.startInProcessJobs()
+        }
     }
 
     // Register admin commands.
-    app.asyncCommands.use(ListSubscribersCommand(), as: "list-subscribers")
-    app.asyncCommands.use(AcceptCommand(), as: "accept")
-    app.asyncCommands.use(RejectCommand(), as: "reject")
-    app.asyncCommands.use(BlockCommand(), as: "block")
-    app.asyncCommands.use(UnblockCommand(), as: "unblock")
-    app.asyncCommands.use(ListBlockedDomainsCommand(), as: "list-blocked-domains")
+    app.asyncCommands.use(AdminCommandGroup(), as: "admin")
 
     // Configure Leaf view renderer.
     app.views.use(.leaf)
