@@ -48,27 +48,29 @@ struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
         let key = state.map { stateSetKey($0) } ?? allSubscribersKey
         let domainValues = try await redis.smembers(of: key).get()
         let domains = domainValues.compactMap(\.string)
-        var subscribers: [Subscriber] = []
-        for domain in domains {
-            let fields = try await redis.hgetall(from: subscriberKey(domain)).get()
-            if !fields.isEmpty, let sub = decodeSubscriber(domain: domain, fields: fields) {
-                subscribers.append(sub)
-            }
+        guard !domains.isEmpty else { return [] }
+
+        let futures = domains.map { domain in
+            redis.hgetall(from: subscriberKey(domain))
         }
-        return subscribers
+        let results = try await EventLoopFuture.whenAllSucceed(futures, on: redis.eventLoop).get()
+
+        return zip(domains, results).compactMap { (domain, fields) in
+            guard !fields.isEmpty else { return nil }
+            return decodeSubscriber(domain: domain, fields: fields)
+        }
     }
 
     func getAcceptedInboxURLs() async throws -> [String] {
         let domainValues = try await redis.smembers(of: stateSetKey(.accepted)).get()
         let domains = domainValues.compactMap(\.string)
-        var urls: [String] = []
-        for domain in domains {
-            let inboxURL = try await redis.hget("inboxURL", from: subscriberKey(domain)).get()
-            if let url = inboxURL.string {
-                urls.append(url)
-            }
+        guard !domains.isEmpty else { return [] }
+
+        let futures = domains.map { domain in
+            redis.hget("inboxURL", from: subscriberKey(domain))
         }
-        return urls
+        let results = try await EventLoopFuture.whenAllSucceed(futures, on: redis.eventLoop).get()
+        return results.compactMap(\.string)
     }
 
     func saveSubscriber(_ subscriber: Subscriber) async throws {
@@ -129,14 +131,18 @@ struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
     func getAllBlockedDomains() async throws -> [BlockedDomain] {
         let domainValues = try await redis.smembers(of: blockedDomainsSetKey).get()
         let domains = domainValues.compactMap(\.string)
-        var result: [BlockedDomain] = []
-        for domain in domains {
-            let fields = try await redis.hgetall(from: blockedDomainKey(domain)).get()
+        guard !domains.isEmpty else { return [] }
+
+        let futures = domains.map { domain in
+            redis.hgetall(from: blockedDomainKey(domain))
+        }
+        let results = try await EventLoopFuture.whenAllSucceed(futures, on: redis.eventLoop).get()
+
+        return zip(domains, results).map { (domain, fields) in
             let reason = fields["reason"]?.string
             let createdAt = fields["createdAt"]?.string.flatMap { parseDate($0) }
-            result.append(BlockedDomain(domain: domain, reason: reason, createdAt: createdAt))
+            return BlockedDomain(domain: domain, reason: reason, createdAt: createdAt)
         }
-        return result
     }
 
     func blockDomain(_ domain: String, reason: String?) async throws -> Bool {
