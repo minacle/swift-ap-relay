@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidate `RELAY_DOMAIN`, `RELAY_SCHEME`, `RELAY_HOST`, `RELAY_PORT` into single `RELAY_URL` environment variable
 - Refactor admin CLI commands (accept, reject, block, unblock, list-subscribers) to use Admin REST API client instead of direct database access
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
+- `RELAY_URL` in docker-compose now defaults to `http://127.0.0.1:8080` instead of requiring the variable to be set
 
 ### Removed
 

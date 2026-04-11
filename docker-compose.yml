@@ -1,6 +1,6 @@
 x-shared_environment: &shared_environment
   LOG_LEVEL: ${LOG_LEVEL:-debug}
-  RELAY_URL: ${RELAY_URL:?RELAY_URL is required}
+  RELAY_URL: ${RELAY_URL:-http://127.0.0.1:8080}
   REDIS_URL: redis://valkey:6379
   ADMIN_TOKEN: ${ADMIN_TOKEN:-}
   MANUAL_ACCEPT: ${MANUAL_ACCEPT:-false}
