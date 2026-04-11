@@ -1,5 +1,5 @@
-# Created by https://www.toptal.com/developers/gitignore/api/windows,macos,linux,swift
-# Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,linux,swift
+# Created by https://www.toptal.com/developers/gitignore/api/windows,macos,linux,swift,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,linux,swift,visualstudiocode
 
 ### Linux ###
 *~
@@ -132,6 +132,25 @@ fastlane/test_output
 
 iOSInjectionProject/
 
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db
@@ -158,4 +177,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,swift
+# End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,swift,visualstudiocode
