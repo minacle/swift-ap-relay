@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Leaf templating engine for server-side HTML rendering with `index.leaf` template
 - RelayRepository protocol with RedisRelayRepository implementation for Redis-backed data access
 - Vapor Queues job system with DeliveryJob, AcceptJob, and RejectJob for reliable activity delivery
 - SignedDeliveryHelper for shared HTTP Signature signing across all delivery jobs
@@ -17,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace inline HTML generation in IndexController with Leaf template rendering
+- Rewrite Dockerfile to follow Vapor recommended template with jemalloc, build caching, non-root user, and resource staging
 - Remove Redis MULTI/EXEC transaction wrapping from subscriber save and delete operations
 - Replace Fluent ORM (SQLite/PostgreSQL) with Redis as the sole data store
 - Replace custom AsyncStream-based DeliveryService with Vapor Queues for persistent, concurrency-controlled delivery

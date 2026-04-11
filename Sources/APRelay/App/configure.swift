@@ -1,4 +1,5 @@
 import APRelayCore
+import Leaf
 import Metrics
 import Prometheus
 import Queues
@@ -52,6 +53,9 @@ func configure(_ app: Application) async throws {
     app.asyncCommands.use(BlockCommand(), as: "block")
     app.asyncCommands.use(UnblockCommand(), as: "unblock")
     app.asyncCommands.use(ListBlockedDomainsCommand(), as: "list-blocked-domains")
+
+    // Configure Leaf view renderer.
+    app.views.use(.leaf)
 
     // Register routes.
     try routes(app)
