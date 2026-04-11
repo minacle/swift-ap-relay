@@ -1,42 +1,45 @@
+import APRelayCore
 import Vapor
 import XCTQueues
 @testable import APRelay
 
 /// Configures the app for testing with mock repository and actor fetcher.
 func testConfigure(_ app: Application) async throws {
-    setenv("RELAY_URL", "http://localhost", 1)
-    setenv("ADMIN_TOKEN", "test-token", 1)
-    setenv("MANUAL_ACCEPT", "false", 1)
-    setenv("RESTRICTED_MODE", "false", 1)
     app.repositoryOverride = MockRelayRepository()
     app.deduplicatorOverride = MockActivityDeduplicator()
     app.queues.use(.asyncTest)
     try await APRelay.configure(app)
+    app.relayConfig = RelayConfiguration(
+        baseURL: "http://localhost",
+        adminToken: "test-token"
+    )
     app.actorFetcher = MockActorFetcher()
 }
 
 /// Configures the app with manual accept mode enabled.
 func testConfigureManualAccept(_ app: Application) async throws {
-    setenv("RELAY_URL", "http://localhost", 1)
-    setenv("ADMIN_TOKEN", "test-token", 1)
-    setenv("MANUAL_ACCEPT", "true", 1)
-    setenv("RESTRICTED_MODE", "false", 1)
     app.repositoryOverride = MockRelayRepository()
     app.deduplicatorOverride = MockActivityDeduplicator()
     app.queues.use(.asyncTest)
     try await APRelay.configure(app)
+    app.relayConfig = RelayConfiguration(
+        baseURL: "http://localhost",
+        adminToken: "test-token",
+        manualAccept: true
+    )
     app.actorFetcher = MockActorFetcher()
 }
 
 /// Configures the app with restricted mode enabled.
 func testConfigureRestricted(_ app: Application) async throws {
-    setenv("RELAY_URL", "http://localhost", 1)
-    setenv("ADMIN_TOKEN", "test-token", 1)
-    setenv("MANUAL_ACCEPT", "false", 1)
-    setenv("RESTRICTED_MODE", "true", 1)
     app.repositoryOverride = MockRelayRepository()
     app.deduplicatorOverride = MockActivityDeduplicator()
     app.queues.use(.asyncTest)
     try await APRelay.configure(app)
+    app.relayConfig = RelayConfiguration(
+        baseURL: "http://localhost",
+        adminToken: "test-token",
+        restrictedMode: true
+    )
     app.actorFetcher = MockActorFetcher()
 }

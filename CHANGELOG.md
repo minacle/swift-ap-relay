@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix flaky CI tests caused by `setenv()` race condition across concurrent test suites; replace process-global environment variables with direct `RelayConfiguration` injection per test app instance
 - Fix digest mismatch (401) on incoming POST requests by explicitly collecting the request body in signature verification middleware; Vapor's route-level body collection runs after middleware, so `request.body.data` was nil for streamed requests
 - Fix crash on startup when Redis connection pools are not yet available during `configure()` by deferring signing key initialization to lifecycle boot hook
 - Replace `try!` with `throws` in HTTP signature signing to prevent server crashes

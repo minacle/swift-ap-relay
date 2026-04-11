@@ -1,3 +1,4 @@
+import APRelayCore
 import Testing
 import Vapor
 import VaporTesting
@@ -294,10 +295,12 @@ struct AdminAPITests {
     @Test("Admin endpoints with ADMIN_TOKEN unset return 403")
     func noAdminToken() async throws {
         try await withApp(configure: { app in
-            setenv("RELAY_URL", "http://localhost", 1)
-            setenv("ADMIN_TOKEN", "", 1)
             app.repositoryOverride = MockRelayRepository()
             try await APRelay.configure(app)
+            app.relayConfig = RelayConfiguration(
+                baseURL: "http://localhost",
+                adminToken: ""
+            )
             app.actorFetcher = MockActorFetcher()
         }) { app in
             try await app.testing().test(.GET, "api/admin/subscribers") { res async in
