@@ -54,7 +54,7 @@ struct RejectJob: AsyncJob {
             logger: context.logger
         )
 
-        context.logger.info("Sent Reject to \(payload.inboxURL)")
+        context.logger.notice("Sent Reject to \(payload.inboxURL)")
     }
 
     func error(_ context: QueueContext, _ error: any Error, _ payload: RejectPayload) async throws {

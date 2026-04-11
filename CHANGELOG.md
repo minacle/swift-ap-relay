@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Restructure logging levels for relay operations: subscription state changes (follow, unfollow, accept, reject) use `notice`, routine operations and security-audit traces (received, delivered, duplicate, non-subscriber, unsupported type) use `info`
+- Add missing logs to `handleForward` for non-subscriber rejection and successful forwarding
 - `HTTPSignature.verify()` no longer accepts an unused `body` parameter
 - Actor fetch Accept header now uses spec-compliant `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` with `application/activity+json` fallback
 - Replace `ISO8601DateFormatter` with `Date.ISO8601FormatStyle` in RedisRelayRepository, removing `nonisolated(unsafe)` static property

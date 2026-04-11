@@ -36,9 +36,11 @@ struct InboxController: RouteCollection {
             )
         }
 
+        req.logger.info("Received \(activity.type) from \(activityActorDomain)")
+
         // Duplicate detection.
         if try await req.activityDeduplicator.isDuplicate(activity.id) {
-            req.logger.debug("Duplicate activity ignored: \(activity.id)")
+            req.logger.info("Duplicate activity ignored: \(activity.id)")
             return .accepted
         }
 
@@ -138,7 +140,7 @@ struct InboxController: RouteCollection {
             try await repository.saveSubscriber(subscriber)
         }
 
-        req.logger.info("Follow from \(actorDomain), state: \(state.rawValue)")
+        req.logger.notice("Follow from \(actorDomain), state: \(state.rawValue)")
 
         if state == .accepted {
             try await req.queue.dispatch(
@@ -181,7 +183,7 @@ struct InboxController: RouteCollection {
 
         if try await req.repository.getSubscriber(domain: actorDomain) != nil {
             try await req.repository.deleteSubscriber(domain: actorDomain)
-            req.logger.info("Removed subscriber: \(actorDomain)")
+            req.logger.notice("Removed subscriber: \(actorDomain)")
         }
     }
 
@@ -248,6 +250,7 @@ struct InboxController: RouteCollection {
             let sender = try await repository.getSubscriber(domain: actorDomain),
             sender.state == .accepted
         else {
+            req.logger.info("Forward from non-subscriber \(actorDomain), ignoring")
             return
         }
 
@@ -260,6 +263,10 @@ struct InboxController: RouteCollection {
                 maxRetryCount: 5
             )
         }
+
+        req.logger.info(
+            "Forwarding \(activity.type) from \(actorDomain) to \(inboxURLs.count - 1) subscribers"
+        )
     }
 
     // MARK: - Helpers
