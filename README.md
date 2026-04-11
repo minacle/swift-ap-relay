@@ -1,0 +1,119 @@
+# APRelay
+
+An ActivityPub relay server built with Swift and Vapor.
+
+APRelay relays activities between federated instances, enabling cross-instance content discovery. It supports subscriber management, domain blocking, restricted mode (allowlist), and HTTP Signature verification.
+
+## Features
+
+- ActivityPub relay (Create, Announce, etc.)
+- Authorized Fetch (signed GET requests) support
+- Subscriber management with pending / accepted / rejected states
+- Manual accept mode for controlled federation
+- Domain blocking with optional reason
+- Restricted mode (allowlist)
+- Redis-backed activity deduplication
+- Background job queue for reliable delivery
+- Prometheus metrics export (`/metrics`)
+- WebFinger & NodeInfo 2.1 discovery
+- Admin REST API & CLI commands
+
+## Requirements
+
+| Component | Version |
+|-----------|---------|
+| Swift | 6.3+ |
+| macOS | 14+ |
+| Redis (or Valkey) | 7+ |
+
+## Getting Started
+
+### Build
+
+```bash
+swift build
+```
+
+### Run
+
+```bash
+swift run APRelay serve
+```
+
+### Test
+
+```bash
+swift test
+```
+
+## Docker
+
+### Using Docker Compose (recommended)
+
+```bash
+docker compose up -d
+```
+
+This starts the relay server and a Valkey (Redis-compatible) instance. The relay is available at `http://localhost:8080` by default.
+
+### Using Docker directly
+
+```bash
+docker build -t aprelay .
+docker run -p 8080:8080 \
+  -e RELAY_URL=https://relay.example.com \
+  -e REDIS_URL=redis://your-redis:6379 \
+  -e ADMIN_TOKEN=your-secret-token \
+  aprelay
+```
+
+### Container registry
+
+Pre-built images are available from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/sinoru/swift-ap-relay:latest
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RELAY_URL` | Public base URL of the relay | `http://127.0.0.1:8080` |
+| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
+| `ADMIN_TOKEN` | Bearer token for Admin API authentication | (empty) |
+| `MANUAL_ACCEPT` | Require admin approval for new subscribers | `false` |
+| `RESTRICTED_MODE` | Only allow explicitly accepted domains | `false` |
+| `RELAY_DESCRIPTION` | HTML description shown on the homepage | (empty) |
+| `RELAY_FOOTER` | HTML footer shown on the homepage | (empty) |
+| `LOG_LEVEL` | Logging level (`debug`, `info`, `notice`, `warning`, `error`) | `debug` |
+
+## Admin CLI Commands
+
+All admin commands connect to a running relay server via the Admin API.
+
+```bash
+# List subscribers
+swift run APRelay admin list-subscribers [--state pending|accepted|rejected]
+
+# Accept / reject a subscriber
+swift run APRelay admin accept <domain>
+swift run APRelay admin reject <domain>
+
+# Block / unblock a domain
+swift run APRelay admin block <domain> [--reason "..."]
+swift run APRelay admin unblock <domain>
+
+# List blocked domains
+swift run APRelay admin list-blocked-domains
+```
+
+**Connection options** (available for all admin subcommands):
+
+| Option | Description |
+|--------|-------------|
+| `--url <URL>` | Full Admin API URL |
+| `--hostname, -H <HOST>` | Admin API hostname |
+| `--port, -p <PORT>` | Admin API port |
+| `--tls` | Use HTTPS |
+| `--unix-socket <PATH>` | Unix domain socket path |

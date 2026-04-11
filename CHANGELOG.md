@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Project README with feature overview, build/run instructions, Docker guide, environment variables reference, and admin CLI documentation
 - `admin` command group: admin CLI commands (`accept`, `reject`, `block`, `unblock`, `list-subscribers`, `list-blocked-domains`) are now subcommands under `APRelay admin` instead of top-level commands
 - Signed HTTP GET requests for remote actor fetching, enabling compatibility with Mastodon Authorized Fetch (Secure Mode) and Pleroma `authorized_fetch_mode`
 - `HTTPSignature.signGET()` method for signing GET requests with `(request-target)`, `host`, and `date` headers
