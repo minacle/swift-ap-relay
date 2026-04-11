@@ -1,0 +1,234 @@
+import Foundation
+@preconcurrency import RediStack
+import Vapor
+
+/// Redis-backed implementation of ``RelayRepository``.
+///
+/// Key schema:
+/// - `subscriber:{domain}` — Hash with subscriber fields
+/// - `subscribers:state:{state}` — Set of domains per state
+/// - `subscribers:all` — Set of all subscriber domains
+/// - `blocked_domains` — Set of blocked domain strings
+/// - `blocked_domain:{domain}` — Hash with reason/createdAt
+/// - `allowed_domains` — Set of allowed domain strings
+/// - `relay_settings` — Hash of key-value settings
+struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
+    let redis: any RedisClient
+
+    nonisolated(unsafe) private static let dateFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private func formatDate(_ date: Date) -> String {
+        Self.dateFormatter.string(from: date)
+    }
+
+    private func parseDate(_ string: String) -> Date? {
+        Self.dateFormatter.date(from: string)
+    }
+
+    // MARK: - Key Helpers
+
+    private func subscriberKey(_ domain: String) -> RedisKey { "subscriber:\(domain)" }
+    private func stateSetKey(_ state: SubscriberState) -> RedisKey {
+        "subscribers:state:\(state.rawValue)"
+    }
+    private var allSubscribersKey: RedisKey { "subscribers:all" }
+    private var blockedDomainsSetKey: RedisKey { "blocked_domains" }
+    private func blockedDomainKey(_ domain: String) -> RedisKey { "blocked_domain:\(domain)" }
+    private var allowedDomainsSetKey: RedisKey { "allowed_domains" }
+    private var settingsKey: RedisKey { "relay_settings" }
+
+    // MARK: - Subscribers
+
+    func getSubscriber(domain: String) async throws -> Subscriber? {
+        let fields = try await redis.hgetall(from: subscriberKey(domain)).get()
+        guard !fields.isEmpty else { return nil }
+        return decodeSubscriber(domain: domain, fields: fields)
+    }
+
+    func getAllSubscribers(state: SubscriberState?) async throws -> [Subscriber] {
+        let key = state.map { stateSetKey($0) } ?? allSubscribersKey
+        let domainValues = try await redis.smembers(of: key).get()
+        let domains = domainValues.compactMap(\.string)
+        var subscribers: [Subscriber] = []
+        for domain in domains {
+            let fields = try await redis.hgetall(from: subscriberKey(domain)).get()
+            if !fields.isEmpty, let sub = decodeSubscriber(domain: domain, fields: fields) {
+                subscribers.append(sub)
+            }
+        }
+        return subscribers
+    }
+
+    func getAcceptedInboxURLs() async throws -> [String] {
+        let domainValues = try await redis.smembers(of: stateSetKey(.accepted)).get()
+        let domains = domainValues.compactMap(\.string)
+        var urls: [String] = []
+        for domain in domains {
+            let inboxURL = try await redis.hget("inboxURL", from: subscriberKey(domain)).get()
+            if let url = inboxURL.string {
+                urls.append(url)
+            }
+        }
+        return urls
+    }
+
+    func saveSubscriber(_ subscriber: Subscriber) async throws {
+        let key = subscriberKey(subscriber.domain)
+        let now = formatDate(Date())
+
+        // Check existing state for set index management.
+        let existingState = try await redis.hget("state", from: key).get().string
+
+        let createdAt: String
+        if let existing = try await redis.hget("createdAt", from: key).get().string {
+            createdAt = existing
+        } else {
+            createdAt = subscriber.createdAt.map { formatDate($0) } ?? now
+        }
+
+        // Use MULTI/EXEC for atomic update.
+        _ = try await redis.send(command: "MULTI").get()
+        do {
+            let fields: [String: RESPValue] = [
+                "inboxURL": .init(from: subscriber.inboxURL),
+                "actorID": .init(from: subscriber.actorID),
+                "state": .init(from: subscriber.state.rawValue),
+                "followActivityID": .init(from: subscriber.followActivityID),
+                "followObjectURI": .init(from: subscriber.followObjectURI ?? ""),
+                "createdAt": .init(from: createdAt),
+                "updatedAt": .init(from: now),
+            ]
+            _ = try await redis.hmset(fields, in: key).get()
+            _ = try await redis.sadd(subscriber.domain, to: allSubscribersKey).get()
+
+            // Move between state sets if state changed.
+            if let old = existingState, old != subscriber.state.rawValue,
+                let oldState = SubscriberState(rawValue: old)
+            {
+                _ = try await redis.srem(subscriber.domain, from: stateSetKey(oldState)).get()
+            }
+            _ = try await redis.sadd(subscriber.domain, to: stateSetKey(subscriber.state)).get()
+
+            _ = try await redis.send(command: "EXEC").get()
+        } catch {
+            _ = try? await redis.send(command: "DISCARD").get()
+            throw error
+        }
+    }
+
+    func deleteSubscriber(domain: String) async throws {
+        let stateValue = try await redis.hget("state", from: subscriberKey(domain)).get().string
+
+        _ = try await redis.send(command: "MULTI").get()
+        do {
+            _ = try await redis.send(
+                command: "DEL",
+                with: [.init(from: subscriberKey(domain).rawValue)]
+            ).get()
+            _ = try await redis.srem(domain, from: allSubscribersKey).get()
+
+            if let stateRaw = stateValue, let state = SubscriberState(rawValue: stateRaw) {
+                _ = try await redis.srem(domain, from: stateSetKey(state)).get()
+            }
+
+            _ = try await redis.send(command: "EXEC").get()
+        } catch {
+            _ = try? await redis.send(command: "DISCARD").get()
+            throw error
+        }
+    }
+
+    // MARK: - Blocked Domains
+
+    func isBlocked(domain: String) async throws -> Bool {
+        try await redis.sismember(domain, of: blockedDomainsSetKey).get()
+    }
+
+    func getAllBlockedDomains() async throws -> [BlockedDomain] {
+        let domainValues = try await redis.smembers(of: blockedDomainsSetKey).get()
+        let domains = domainValues.compactMap(\.string)
+        var result: [BlockedDomain] = []
+        for domain in domains {
+            let fields = try await redis.hgetall(from: blockedDomainKey(domain)).get()
+            let reason = fields["reason"]?.string
+            let createdAt = fields["createdAt"]?.string.flatMap { parseDate($0) }
+            result.append(BlockedDomain(domain: domain, reason: reason, createdAt: createdAt))
+        }
+        return result
+    }
+
+    func blockDomain(_ domain: String, reason: String?) async throws -> Bool {
+        let added = try await redis.sadd(domain, to: blockedDomainsSetKey).get()
+        guard added > 0 else { return false }
+
+        let now = formatDate(Date())
+        var fields: [String: RESPValue] = [
+            "createdAt": .init(from: now)
+        ]
+        if let reason {
+            fields["reason"] = .init(from: reason)
+        }
+        _ = try await redis.hmset(fields, in: blockedDomainKey(domain)).get()
+        return true
+    }
+
+    func unblockDomain(_ domain: String) async throws -> Bool {
+        let removed = try await redis.srem(domain, from: blockedDomainsSetKey).get()
+        guard removed > 0 else { return false }
+        _ = try await redis.send(
+            command: "DEL",
+            with: [.init(from: blockedDomainKey(domain).rawValue)]
+        ).get()
+        return true
+    }
+
+    // MARK: - Allowed Domains
+
+    func isAllowed(domain: String) async throws -> Bool {
+        try await redis.sismember(domain, of: allowedDomainsSetKey).get()
+    }
+
+    // MARK: - Settings
+
+    func getSetting(key: String) async throws -> String? {
+        let value = try await redis.hget(key, from: settingsKey).get()
+        return value.string
+    }
+
+    func setSetting(key: String, value: String) async throws {
+        _ = try await redis.hset(key, to: value, in: settingsKey).get()
+    }
+
+    // MARK: - Decoding Helpers
+
+    private func decodeSubscriber(domain: String, fields: [String: RESPValue]) -> Subscriber? {
+        guard
+            let inboxURL = fields["inboxURL"]?.string,
+            let actorID = fields["actorID"]?.string,
+            let stateRaw = fields["state"]?.string,
+            let state = SubscriberState(rawValue: stateRaw),
+            let followActivityID = fields["followActivityID"]?.string
+        else {
+            return nil
+        }
+
+        let followObjectURI = fields["followObjectURI"]?.string.flatMap { $0.isEmpty ? nil : $0 }
+        let createdAt = fields["createdAt"]?.string.flatMap { parseDate($0) }
+        let updatedAt = fields["updatedAt"]?.string.flatMap { parseDate($0) }
+
+        return Subscriber(
+            domain: domain,
+            inboxURL: inboxURL,
+            actorID: actorID,
+            state: state,
+            followActivityID: followActivityID,
+            followObjectURI: followObjectURI,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}

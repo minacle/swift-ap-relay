@@ -7,11 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- RelayRepository protocol with RedisRelayRepository implementation for Redis-backed data access
+- Vapor Queues job system with DeliveryJob, AcceptJob, and RejectJob for reliable activity delivery
+- SignedDeliveryHelper for shared HTTP Signature signing across all delivery jobs
+- MockRelayRepository actor for in-memory testing without Redis
+- Valkey (Redis-compatible) service in docker-compose with AOF persistence
+
 ### Changed
 
+- Replace Fluent ORM (SQLite/PostgreSQL) with Redis as the sole data store
+- Replace custom AsyncStream-based DeliveryService with Vapor Queues for persistent, concurrency-controlled delivery
+- Broadcast delivery now dispatches individual jobs per inbox, with concurrency naturally limited by queue workerCount
+- Models are now plain Codable structs instead of Fluent Model classes
+- Environment variable `DATABASE_URL` replaced by `REDIS_URL` (default: `redis://localhost:6379`)
+- Docker Compose uses Valkey 8 instead of a relational database
 - Refactor admin CLI commands (accept, reject, block, unblock, list-subscribers) to use Admin REST API client instead of direct database access
-- Refactor DeliveryService to AsyncStream-based work queue with structured concurrency and graceful shutdown via Vapor LifecycleHandler
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
+
+### Removed
+
+- Fluent ORM, SQLite driver, and PostgreSQL driver dependencies
+- All database migration files
+- DeliveryService actor with in-memory AsyncStream work queue
 
 ### Fixed
 
@@ -39,8 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AdminAPIClient HTTP client for admin CLI commands to communicate with the relay server via REST API
 - Delivery service with exponential backoff retry and smart error classification
 - WebFinger, NodeInfo 2.1, and actor endpoint for federation discovery
-- RSA-4096 key pair generation and database storage
+- RSA-4096 key pair generation and storage
 - Prometheus metrics for inbox activities and delivery performance
 - Docker and docker-compose support
-- SQLite and PostgreSQL database support via Fluent
 - Comprehensive test suite: inbox integration, signature middleware, and admin API tests

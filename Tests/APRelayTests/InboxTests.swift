@@ -1,5 +1,4 @@
 import APRelayCore
-import Fluent
 import Testing
 import Vapor
 import VaporTesting
@@ -20,7 +19,7 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let subscribers = try await Subscriber.query(on: app.db).all()
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
             #expect(subscribers.count == 1)
             #expect(subscribers.first?.domain == TestSigning.testActorDomain)
             #expect(subscribers.first?.state == .accepted)
@@ -43,7 +42,7 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let subscribers = try await Subscriber.query(on: app.db).all()
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
             #expect(subscribers.count == 1)
             #expect(subscribers.first?.state == .accepted)
             #expect(subscribers.first?.followObjectURI == config.actorURL)
@@ -63,8 +62,8 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let count = try await Subscriber.query(on: app.db).count()
-            #expect(count == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
         }
     }
 
@@ -79,7 +78,9 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let subscriber = try await Subscriber.query(on: app.db).first()
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
             #expect(subscriber?.state == .pending)
         }
     }
@@ -89,15 +90,16 @@ struct InboxTests {
     @Test("Undo with nested Follow deletes subscriber")
     func undoNestedFollow() async throws {
         try await withApp(configure: testConfigure) { app in
-            // Create subscriber first.
             let sub = Subscriber(
                 domain: TestSigning.testActorDomain,
                 inboxURL: TestSigning.testInboxURL,
                 actorID: TestSigning.testActorID,
                 state: .accepted,
-                followActivityID: "https://remote.example/activities/follow-1"
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let activity = TestSigning.makeUndoActivity()
             let (headers, body) = try TestSigning.signedRequest(activity: activity)
@@ -107,23 +109,24 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let count = try await Subscriber.query(on: app.db).count()
-            #expect(count == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
         }
     }
 
     @Test("Undo with URI-only object deletes subscriber")
     func undoURIObject() async throws {
         try await withApp(configure: testConfigure) { app in
-            let followID = "https://remote.example/activities/follow-1"
             let sub = Subscriber(
                 domain: TestSigning.testActorDomain,
                 inboxURL: TestSigning.testInboxURL,
                 actorID: TestSigning.testActorID,
                 state: .accepted,
-                followActivityID: followID
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let activity = TestSigning.makeUndoActivity(objectAsURI: true)
             let (headers, body) = try TestSigning.signedRequest(activity: activity)
@@ -133,8 +136,8 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            let count = try await Subscriber.query(on: app.db).count()
-            #expect(count == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
         }
     }
 
@@ -148,9 +151,11 @@ struct InboxTests {
                 inboxURL: TestSigning.testInboxURL,
                 actorID: TestSigning.testActorID,
                 state: .accepted,
-                followActivityID: "https://remote.example/activities/follow-1"
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let activity = TestSigning.makeCreateActivity()
             let (headers, body) = try TestSigning.signedRequest(activity: activity)
@@ -185,9 +190,11 @@ struct InboxTests {
                 inboxURL: TestSigning.testInboxURL,
                 actorID: TestSigning.testActorID,
                 state: .accepted,
-                followActivityID: "https://remote.example/activities/follow-1"
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let activity = TestSigning.makeDeleteActivity()
             let (headers, body) = try TestSigning.signedRequest(activity: activity)
@@ -213,7 +220,6 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            // Second request with the same activity ID.
             let activity2 = TestSigning.makeFollowActivity(id: activityID)
             let (headers2, body2) = try TestSigning.signedRequest(activity: activity2)
 
@@ -222,9 +228,8 @@ struct InboxTests {
                 #expect(res.status == .accepted)
             }
 
-            // Only one subscriber should exist.
-            let count = try await Subscriber.query(on: app.db).count()
-            #expect(count == 1)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 1)
         }
     }
 
@@ -233,11 +238,9 @@ struct InboxTests {
     @Test("Activity from blocked domain returns 403")
     func blockedDomain() async throws {
         try await withApp(configure: testConfigure) { app in
-            let blocked = BlockedDomain(
-                domain: TestSigning.testActorDomain,
-                reason: "test"
+            _ = try await app.repository.blockDomain(
+                TestSigning.testActorDomain, reason: "test"
             )
-            try await blocked.save(on: app.db)
 
             let activity = TestSigning.makeFollowActivity()
             let (headers, body) = try TestSigning.signedRequest(activity: activity)
@@ -314,7 +317,6 @@ struct InboxTests {
     @Test("Activity with mismatched actor domain returns 403")
     func actorSignerMismatch() async throws {
         try await withApp(configure: testConfigure) { app in
-            // Activity claims to be from evil.example but signed by remote.example.
             let activity = TestSigning.makeFollowActivity(
                 actor: "https://evil.example/actor"
             )

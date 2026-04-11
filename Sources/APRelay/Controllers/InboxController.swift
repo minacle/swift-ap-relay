@@ -1,6 +1,6 @@
 import APRelayCore
-import Fluent
 import Metrics
+import Queues
 import Tracing
 import Vapor
 
@@ -53,22 +53,17 @@ struct InboxController: RouteCollection {
             span.attributes["activity.id"] = activity.id
 
             let config = req.relayConfig
+            let repository = req.repository
 
             // Check if domain is blocked.
             let actorDomain = extractDomain(from: activity.actor)
             if let domain = actorDomain {
-                let blocked = try await BlockedDomain.query(on: req.db)
-                    .filter(\.$domain == domain)
-                    .count()
-                if blocked > 0 {
+                if try await repository.isBlocked(domain: domain) {
                     throw Abort(.forbidden, reason: "Domain is blocked")
                 }
 
                 if config.restrictedMode {
-                    let allowed = try await AllowedDomain.query(on: req.db)
-                        .filter(\.$domain == domain)
-                        .count()
-                    if allowed == 0 {
+                    if try await !repository.isAllowed(domain: domain) {
                         throw Abort(.forbidden, reason: "Domain is not in allowlist")
                     }
                 }
@@ -103,6 +98,7 @@ struct InboxController: RouteCollection {
         req: Request
     ) async throws {
         let config = req.relayConfig
+        let repository = req.repository
 
         guard let object = activity.object,
             case .uri(let objectURI) = object,
@@ -117,41 +113,43 @@ struct InboxController: RouteCollection {
             ?? verifiedActor.inbox
             ?? guessInboxURL(from: activity.actor)
 
-        let existing = try await Subscriber.query(on: req.db)
-            .filter(\.$domain == actorDomain)
-            .first()
+        let state: SubscriberState = config.manualAccept ? .pending : .accepted
 
-        let subscriber: Subscriber
-        if let existing {
+        if var existing = try await repository.getSubscriber(domain: actorDomain) {
             existing.actorID = activity.actor
             existing.inboxURL = inboxURL
             existing.followActivityID = activity.id
             existing.followObjectURI = objectURI
             if existing.state == .rejected {
-                existing.state = config.manualAccept ? .pending : .accepted
+                existing.state = state
             }
-            try await existing.save(on: req.db)
-            subscriber = existing
+            try await repository.saveSubscriber(existing)
         } else {
-            subscriber = Subscriber(
+            let subscriber = Subscriber(
                 domain: actorDomain,
                 inboxURL: inboxURL,
                 actorID: activity.actor,
-                state: config.manualAccept ? .pending : .accepted,
+                state: state,
                 followActivityID: activity.id,
-                followObjectURI: objectURI
+                followObjectURI: objectURI,
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await subscriber.save(on: req.db)
+            try await repository.saveSubscriber(subscriber)
         }
 
-        req.logger.info("Follow from \(actorDomain), state: \(subscriber.state.rawValue)")
+        req.logger.info("Follow from \(actorDomain), state: \(state.rawValue)")
 
-        if subscriber.state == .accepted {
-            req.deliveryService.enqueueAccept(
-                to: inboxURL,
-                followActivityID: activity.id,
-                followerActorID: activity.actor,
-                followObjectURI: objectURI
+        if state == .accepted {
+            try await req.queue.dispatch(
+                AcceptJob.self,
+                AcceptPayload(
+                    inboxURL: inboxURL,
+                    followActivityID: activity.id,
+                    followerActorID: activity.actor,
+                    followObjectURI: objectURI
+                ),
+                maxRetryCount: 5
             )
         }
     }
@@ -171,8 +169,6 @@ struct InboxController: RouteCollection {
         case .object(let inner):
             innerType = inner.type
         case .uri:
-            // A relay only receives Follow activities, so any Undo from a
-            // subscriber with a URI-only object is assumed to target a Follow.
             innerType = "Follow"
         }
 
@@ -183,11 +179,8 @@ struct InboxController: RouteCollection {
 
         let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
 
-        if let subscriber = try await Subscriber.query(on: req.db)
-            .filter(\.$domain == actorDomain)
-            .first()
-        {
-            try await subscriber.delete(on: req.db)
+        if try await req.repository.getSubscriber(domain: actorDomain) != nil {
+            try await req.repository.deleteSubscriber(domain: actorDomain)
             req.logger.info("Removed subscriber: \(actorDomain)")
         }
     }
@@ -200,21 +193,17 @@ struct InboxController: RouteCollection {
         req: Request
     ) async throws {
         let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
+        let repository = req.repository
 
         guard
-            let subscriber = try await Subscriber.query(on: req.db)
-                .filter(\.$domain == actorDomain)
-                .filter(\.$state == .accepted)
-                .first()
+            let subscriber = try await repository.getSubscriber(domain: actorDomain),
+            subscriber.state == .accepted
         else {
             req.logger.info("Activity from non-subscriber \(actorDomain), ignoring")
             return
         }
 
-        let subscribers = try await Subscriber.query(on: req.db)
-            .filter(\.$state == .accepted)
-            .all()
-        let inboxURLs = subscribers.map(\.inboxURL)
+        let inboxURLs = try await repository.getAcceptedInboxURLs()
 
         let config = req.relayConfig
         let objectURI = activity.object?.uriOrID ?? activity.id
@@ -232,11 +221,13 @@ struct InboxController: RouteCollection {
 
         let announceData = try JSONEncoder().encode(announce)
 
-        req.deliveryService.enqueueBroadcast(
-            activity: announceData,
-            to: inboxURLs,
-            excluding: subscriber.inboxURL
-        )
+        for inbox in inboxURLs where inbox != subscriber.inboxURL {
+            try await req.queue.dispatch(
+                DeliveryJob.self,
+                DeliveryPayload(activity: announceData, inboxURL: inbox),
+                maxRetryCount: 5
+            )
+        }
 
         req.logger.info(
             "Relaying \(activity.type) from \(actorDomain) to \(inboxURLs.count - 1) subscribers"
@@ -251,26 +242,24 @@ struct InboxController: RouteCollection {
         req: Request
     ) async throws {
         let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
+        let repository = req.repository
 
         guard
-            let sender = try await Subscriber.query(on: req.db)
-                .filter(\.$domain == actorDomain)
-                .filter(\.$state == .accepted)
-                .first()
+            let sender = try await repository.getSubscriber(domain: actorDomain),
+            sender.state == .accepted
         else {
             return
         }
 
-        let subscribers = try await Subscriber.query(on: req.db)
-            .filter(\.$state == .accepted)
-            .all()
-        let inboxURLs = subscribers.map(\.inboxURL)
+        let inboxURLs = try await repository.getAcceptedInboxURLs()
 
-        req.deliveryService.enqueueBroadcast(
-            activity: body,
-            to: inboxURLs,
-            excluding: sender.inboxURL
-        )
+        for inbox in inboxURLs where inbox != sender.inboxURL {
+            try await req.queue.dispatch(
+                DeliveryJob.self,
+                DeliveryPayload(activity: body, inboxURL: inbox),
+                maxRetryCount: 5
+            )
+        }
     }
 
     // MARK: - Helpers

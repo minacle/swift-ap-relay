@@ -11,7 +11,7 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         scheme: Environment.get("RELAY_SCHEME") ?? "https",
         host: Environment.get("RELAY_HOST") ?? "0.0.0.0",
         port: Environment.get("RELAY_PORT").flatMap(Int.init) ?? 8080,
-        databaseURL: Environment.get("DATABASE_URL") ?? "sqlite:relay.sqlite",
+        redisURL: Environment.get("REDIS_URL") ?? "redis://localhost:6379",
         adminToken: Environment.get("ADMIN_TOKEN") ?? "",
         manualAccept: Environment.get("MANUAL_ACCEPT") == "true",
         restrictedMode: Environment.get("RESTRICTED_MODE") == "true",

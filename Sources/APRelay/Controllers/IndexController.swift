@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct IndexController: RouteCollection {
@@ -10,9 +9,7 @@ struct IndexController: RouteCollection {
     private func index(req: Request) async throws -> Response {
         let config = req.relayConfig
 
-        let subscribers = try await Subscriber.query(on: req.db)
-            .filter(\.$state == .accepted)
-            .all()
+        let subscribers = try await req.repository.getAllSubscribers(state: .accepted)
 
         let instanceListHTML: String
         if subscribers.isEmpty {

@@ -1,4 +1,3 @@
-import Fluent
 import Testing
 import Vapor
 import VaporTesting
@@ -7,8 +6,6 @@ import VaporTesting
 @Suite("AdminAPIClient Tests", .serialized)
 struct AdminAPIClientTests {
 
-    /// Starts a live HTTP server, creates an `AdminAPIClient` pointed at it,
-    /// and runs the given closure.  The server is shut down after the closure returns.
     private func withAdminClient(
         _ body: (Application, AdminAPIClient) async throws -> Void
     ) async throws {
@@ -50,9 +47,11 @@ struct AdminAPIClientTests {
                 inboxURL: "https://example.com/inbox",
                 actorID: "https://example.com/actor",
                 state: .accepted,
-                followActivityID: "https://example.com/follow/1"
+                followActivityID: "https://example.com/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let subscribers = try await client.listSubscribers()
             #expect(subscribers.count == 1)
@@ -69,17 +68,21 @@ struct AdminAPIClientTests {
                 inboxURL: "https://accepted.example/inbox",
                 actorID: "https://accepted.example/actor",
                 state: .accepted,
-                followActivityID: "https://accepted.example/follow/1"
+                followActivityID: "https://accepted.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
             let pending = Subscriber(
                 domain: "pending.example",
                 inboxURL: "https://pending.example/inbox",
                 actorID: "https://pending.example/actor",
                 state: .pending,
-                followActivityID: "https://pending.example/follow/1"
+                followActivityID: "https://pending.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await accepted.save(on: app.db)
-            try await pending.save(on: app.db)
+            try await app.repository.saveSubscriber(accepted)
+            try await app.repository.saveSubscriber(pending)
 
             let subscribers = try await client.listSubscribers(state: "pending")
             #expect(subscribers.count == 1)
@@ -95,17 +98,17 @@ struct AdminAPIClientTests {
                 inboxURL: "https://test.example/inbox",
                 actorID: "https://test.example/actor",
                 state: .pending,
-                followActivityID: "https://test.example/follow/1"
+                followActivityID: "https://test.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let response = try await client.acceptSubscriber(domain: "test.example")
             #expect(response.status == "accepted")
             #expect(response.domain == "test.example")
 
-            let updated = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == "test.example")
-                .first()
+            let updated = try await app.repository.getSubscriber(domain: "test.example")
             #expect(updated?.state == .accepted)
         }
     }
@@ -127,16 +130,16 @@ struct AdminAPIClientTests {
                 inboxURL: "https://test.example/inbox",
                 actorID: "https://test.example/actor",
                 state: .pending,
-                followActivityID: "https://test.example/follow/1"
+                followActivityID: "https://test.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let response = try await client.rejectSubscriber(domain: "test.example")
             #expect(response.status == "rejected")
 
-            let updated = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == "test.example")
-                .first()
+            let updated = try await app.repository.getSubscriber(domain: "test.example")
             #expect(updated?.state == .rejected)
         }
     }
@@ -154,8 +157,7 @@ struct AdminAPIClientTests {
     @Test("listBlockedDomains returns blocked domains")
     func listBlockedDomains() async throws {
         try await withAdminClient { app, client in
-            let blocked = BlockedDomain(domain: "bad.example", reason: "spam")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: "spam")
 
             let domains = try await client.listBlockedDomains()
             #expect(domains.count == 1)
@@ -172,27 +174,28 @@ struct AdminAPIClientTests {
                 inboxURL: "https://bad.example/inbox",
                 actorID: "https://bad.example/actor",
                 state: .accepted,
-                followActivityID: "https://bad.example/follow/1"
+                followActivityID: "https://bad.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             let response = try await client.blockDomain("bad.example", reason: "spam")
             #expect(response.status == "blocked")
             #expect(response.domain == "bad.example")
 
-            let subCount = try await Subscriber.query(on: app.db).count()
-            #expect(subCount == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
 
-            let blockCount = try await BlockedDomain.query(on: app.db).count()
-            #expect(blockCount == 1)
+            let isBlocked = try await app.repository.isBlocked(domain: "bad.example")
+            #expect(isBlocked)
         }
     }
 
     @Test("blockDomain throws conflict for already-blocked domain")
     func blockAlreadyBlocked() async throws {
         try await withAdminClient { app, client in
-            let blocked = BlockedDomain(domain: "bad.example")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: nil)
 
             await #expect(throws: AdminAPIError.self) {
                 _ = try await client.blockDomain("bad.example")
@@ -203,14 +206,13 @@ struct AdminAPIClientTests {
     @Test("unblockDomain removes blocked domain")
     func unblockDomain() async throws {
         try await withAdminClient { app, client in
-            let blocked = BlockedDomain(domain: "bad.example")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: nil)
 
             let response = try await client.unblockDomain("bad.example")
             #expect(response.status == "unblocked")
 
-            let count = try await BlockedDomain.query(on: app.db).count()
-            #expect(count == 0)
+            let isBlocked = try await app.repository.isBlocked(domain: "bad.example")
+            #expect(!isBlocked)
         }
     }
 

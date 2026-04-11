@@ -1,4 +1,3 @@
-import Fluent
 import Vapor
 
 struct NodeInfoController: RouteCollection {
@@ -23,10 +22,8 @@ struct NodeInfoController: RouteCollection {
     @Sendable
     private func nodeInfo(req: Request) async throws -> NodeInfoResponse {
         let config = req.relayConfig
-        let peers = try await Subscriber.query(on: req.db)
-            .filter(\.$state == .accepted)
-            .all()
-            .map(\.domain)
+        let subscribers = try await req.repository.getAllSubscribers(state: .accepted)
+        let peers = subscribers.map(\.domain)
 
         return NodeInfoResponse(
             version: "2.1",

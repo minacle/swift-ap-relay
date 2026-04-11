@@ -80,13 +80,13 @@ struct AdminAPIClient: Sendable {
     // MARK: - Subscribers
 
     /// Lists subscribers, optionally filtered by state.
-    func listSubscribers(state: String? = nil) async throws -> [Subscriber.DTO] {
+    func listSubscribers(state: String? = nil) async throws -> [Subscriber] {
         var url = "\(baseURL)/api/admin/subscribers"
         if let state {
             url += "?state=\(state)"
         }
         let response = try await performRequest(.GET, url: url)
-        return try response.content.decode([Subscriber.DTO].self)
+        return try response.content.decode([Subscriber].self)
     }
 
     /// Accepts a pending subscriber.
@@ -106,10 +106,10 @@ struct AdminAPIClient: Sendable {
     // MARK: - Blocked Domains
 
     /// Lists all blocked domains.
-    func listBlockedDomains() async throws -> [BlockedDomain.DTO] {
+    func listBlockedDomains() async throws -> [BlockedDomain] {
         let url = "\(baseURL)/api/admin/blocked-domains"
         let response = try await performRequest(.GET, url: url)
-        return try response.content.decode([BlockedDomain.DTO].self)
+        return try response.content.decode([BlockedDomain].self)
     }
 
     /// Blocks a domain with an optional reason.

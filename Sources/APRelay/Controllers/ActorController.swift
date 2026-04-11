@@ -9,7 +9,7 @@ struct ActorController: RouteCollection {
     @Sendable
     private func actor(req: Request) async throws -> ActivityJSON<APActor> {
         let config = req.relayConfig
-        let keyManager = KeyManager(db: req.db)
+        let keyManager = KeyManager(repository: req.repository)
         let publicKeyPEM = try await keyManager.getPublicKeyPEM()
 
         return ActivityJSON(APActor(

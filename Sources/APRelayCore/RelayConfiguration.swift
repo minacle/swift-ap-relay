@@ -9,7 +9,7 @@ public struct RelayConfiguration: Sendable {
     public let scheme: String
     public let host: String
     public let port: Int
-    public let databaseURL: String
+    public let redisURL: String
     public let adminToken: String
     public let manualAccept: Bool
     public let restrictedMode: Bool
@@ -33,7 +33,7 @@ public struct RelayConfiguration: Sendable {
         scheme: String = "https",
         host: String = "0.0.0.0",
         port: Int = 8080,
-        databaseURL: String = "sqlite:relay.sqlite",
+        redisURL: String = "redis://localhost:6379",
         adminToken: String = "",
         manualAccept: Bool = false,
         restrictedMode: Bool = false,
@@ -44,7 +44,7 @@ public struct RelayConfiguration: Sendable {
         self.scheme = scheme
         self.host = host
         self.port = port
-        self.databaseURL = databaseURL
+        self.redisURL = redisURL
         self.adminToken = adminToken
         self.manualAccept = manualAccept
         self.restrictedMode = restrictedMode

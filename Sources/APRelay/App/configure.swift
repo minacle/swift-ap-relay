@@ -1,9 +1,9 @@
 import APRelayCore
-import Fluent
-import FluentPostgresDriver
-import FluentSQLiteDriver
 import Metrics
 import Prometheus
+import Queues
+import QueuesRedisDriver
+import Redis
 import Vapor
 
 func configure(_ app: Application) async throws {
@@ -23,32 +23,27 @@ func configure(_ app: Application) async throws {
     app.http.server.configuration.hostname = config.host
     app.http.server.configuration.port = config.port
 
-    // Configure database (use in-memory SQLite for testing).
-    if app.environment == .testing {
-        app.databases.use(.sqlite(.memory), as: .sqlite)
-    } else {
-        try configureDatabase(app, url: config.databaseURL)
+    // Configure Redis and Queues.
+    if app.environment != .testing {
+        let redisConfig = try RedisConfiguration(url: config.redisURL)
+        app.redis.configuration = redisConfig
+        app.queues.use(.redis(redisConfig))
+
+        // Register queue jobs.
+        app.queues.add(DeliveryJob())
+        app.queues.add(AcceptJob())
+        app.queues.add(RejectJob())
     }
 
-    // Register migrations.
-    app.migrations.add(CreateSubscribers())
-    app.migrations.add(CreateBlockedDomains())
-    app.migrations.add(CreateAllowedDomains())
-    app.migrations.add(CreateRelaySettings())
-    app.migrations.add(AddFollowObjectURIToSubscribers())
-
-    try await app.autoMigrate()
-
-    // Initialize delivery service.
-    let keyManager = KeyManager(db: app.db)
+    // Initialize signing key.
+    let keyManager = KeyManager(repository: app.repository)
     let privateKey = try await keyManager.getOrCreatePrivateKey()
-    app.deliveryService = DeliveryService(
-        client: app.client,
-        config: config,
-        privateKey: privateKey,
-        logger: app.logger
-    )
-    app.lifecycle.use(app.deliveryService)
+    app.signingKey = privateKey
+
+    // Start queue workers in non-testing environments.
+    if app.environment != .testing {
+        try app.queues.startInProcessJobs()
+    }
 
     // Register admin commands.
     app.asyncCommands.use(ListSubscribersCommand(), as: "list-subscribers")
@@ -60,34 +55,6 @@ func configure(_ app: Application) async throws {
 
     // Register routes.
     try routes(app)
-}
-
-private func configureDatabase(_ app: Application, url: String) throws {
-    if url.hasPrefix("postgres://") || url.hasPrefix("postgresql://") {
-        guard let postgresURL = URLComponents(string: url) else {
-            throw Abort(.internalServerError, reason: "Invalid DATABASE_URL: \(url)")
-        }
-        let tlsConfig: DatabaseConfigurationFactory = .postgres(
-            configuration: .init(
-                hostname: postgresURL.host ?? "localhost",
-                port: postgresURL.port ?? 5432,
-                username: postgresURL.user ?? "postgres",
-                password: postgresURL.password,
-                database: String(postgresURL.path.dropFirst()),
-                tls: .disable
-            )
-        )
-        app.databases.use(tlsConfig, as: .psql)
-    } else if url.hasPrefix("sqlite:") {
-        let path = String(url.dropFirst("sqlite:".count))
-        if path == ":memory:" {
-            app.databases.use(.sqlite(.memory), as: .sqlite)
-        } else {
-            app.databases.use(.sqlite(.file(path)), as: .sqlite)
-        }
-    } else {
-        throw Abort(.internalServerError, reason: "Invalid DATABASE_URL: \(url)")
-    }
 }
 
 // MARK: - App Storage for RelayConfiguration

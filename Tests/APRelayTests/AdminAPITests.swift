@@ -1,4 +1,3 @@
-import Fluent
 import Testing
 import Vapor
 import VaporTesting
@@ -36,9 +35,11 @@ struct AdminAPITests {
                 inboxURL: "https://example.com/inbox",
                 actorID: "https://example.com/actor",
                 state: .accepted,
-                followActivityID: "https://example.com/follow/1"
+                followActivityID: "https://example.com/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             try await app.testing().test(
                 .GET,
@@ -59,17 +60,21 @@ struct AdminAPITests {
                 inboxURL: "https://accepted.example/inbox",
                 actorID: "https://accepted.example/actor",
                 state: .accepted,
-                followActivityID: "https://accepted.example/follow/1"
+                followActivityID: "https://accepted.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
             let pending = Subscriber(
                 domain: "pending.example",
                 inboxURL: "https://pending.example/inbox",
                 actorID: "https://pending.example/actor",
                 state: .pending,
-                followActivityID: "https://pending.example/follow/1"
+                followActivityID: "https://pending.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await accepted.save(on: app.db)
-            try await pending.save(on: app.db)
+            try await app.repository.saveSubscriber(accepted)
+            try await app.repository.saveSubscriber(pending)
 
             try await app.testing().test(
                 .GET,
@@ -92,9 +97,11 @@ struct AdminAPITests {
                 inboxURL: "https://test.example/inbox",
                 actorID: "https://test.example/actor",
                 state: .pending,
-                followActivityID: "https://test.example/follow/1"
+                followActivityID: "https://test.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             try await app.testing().test(
                 .POST,
@@ -105,9 +112,7 @@ struct AdminAPITests {
                 #expect(res.body.string.contains("accepted"))
             }
 
-            let updated = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == "test.example")
-                .first()
+            let updated = try await app.repository.getSubscriber(domain: "test.example")
             #expect(updated?.state == .accepted)
         }
     }
@@ -120,9 +125,11 @@ struct AdminAPITests {
                 inboxURL: "https://test.example/inbox",
                 actorID: "https://test.example/actor",
                 state: .pending,
-                followActivityID: "https://test.example/follow/1"
+                followActivityID: "https://test.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             try await app.testing().test(
                 .POST,
@@ -133,9 +140,7 @@ struct AdminAPITests {
                 #expect(res.body.string.contains("rejected"))
             }
 
-            let updated = try await Subscriber.query(on: app.db)
-                .filter(\.$domain == "test.example")
-                .first()
+            let updated = try await app.repository.getSubscriber(domain: "test.example")
             #expect(updated?.state == .rejected)
         }
     }
@@ -148,9 +153,11 @@ struct AdminAPITests {
                 inboxURL: "https://test.example/inbox",
                 actorID: "https://test.example/actor",
                 state: .accepted,
-                followActivityID: "https://test.example/follow/1"
+                followActivityID: "https://test.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             try await app.testing().test(
                 .DELETE,
@@ -161,8 +168,8 @@ struct AdminAPITests {
                 #expect(res.body.string.contains("removed"))
             }
 
-            let count = try await Subscriber.query(on: app.db).count()
-            #expect(count == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
         }
     }
 
@@ -184,8 +191,7 @@ struct AdminAPITests {
     @Test("GET blocked domains returns list")
     func listBlockedDomains() async throws {
         try await withApp(configure: testConfigure) { app in
-            let blocked = BlockedDomain(domain: "bad.example", reason: "spam")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: "spam")
 
             try await app.testing().test(
                 .GET,
@@ -201,15 +207,16 @@ struct AdminAPITests {
     @Test("POST blocks domain and removes existing subscriber")
     func blockDomain() async throws {
         try await withApp(configure: testConfigure) { app in
-            // Create a subscriber for the domain to be blocked.
             let sub = Subscriber(
                 domain: "bad.example",
                 inboxURL: "https://bad.example/inbox",
                 actorID: "https://bad.example/actor",
                 state: .accepted,
-                followActivityID: "https://bad.example/follow/1"
+                followActivityID: "https://bad.example/follow/1",
+                createdAt: Date(),
+                updatedAt: Date()
             )
-            try await sub.save(on: app.db)
+            try await app.repository.saveSubscriber(sub)
 
             var blockHeaders = authHeaders
             blockHeaders.contentType = .json
@@ -224,19 +231,18 @@ struct AdminAPITests {
                 #expect(res.body.string.contains("blocked"))
             }
 
-            let subCount = try await Subscriber.query(on: app.db).count()
-            #expect(subCount == 0)
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
 
-            let blockCount = try await BlockedDomain.query(on: app.db).count()
-            #expect(blockCount == 1)
+            let isBlocked = try await app.repository.isBlocked(domain: "bad.example")
+            #expect(isBlocked)
         }
     }
 
     @Test("POST block already-blocked domain returns 409")
     func blockAlreadyBlocked() async throws {
         try await withApp(configure: testConfigure) { app in
-            let blocked = BlockedDomain(domain: "bad.example")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: nil)
 
             var blockHeaders = authHeaders
             blockHeaders.contentType = .json
@@ -255,8 +261,7 @@ struct AdminAPITests {
     @Test("DELETE unblocks domain")
     func unblockDomain() async throws {
         try await withApp(configure: testConfigure) { app in
-            let blocked = BlockedDomain(domain: "bad.example")
-            try await blocked.save(on: app.db)
+            _ = try await app.repository.blockDomain("bad.example", reason: nil)
 
             try await app.testing().test(
                 .DELETE,
@@ -267,8 +272,8 @@ struct AdminAPITests {
                 #expect(res.body.string.contains("unblocked"))
             }
 
-            let count = try await BlockedDomain.query(on: app.db).count()
-            #expect(count == 0)
+            let isBlocked = try await app.repository.isBlocked(domain: "bad.example")
+            #expect(!isBlocked)
         }
     }
 
@@ -288,10 +293,10 @@ struct AdminAPITests {
 
     @Test("Admin endpoints with ADMIN_TOKEN unset return 403")
     func noAdminToken() async throws {
-        setenv("ADMIN_TOKEN", "", 1)
         try await withApp(configure: { app in
             setenv("RELAY_DOMAIN", "localhost", 1)
             setenv("ADMIN_TOKEN", "", 1)
+            app.repositoryOverride = MockRelayRepository()
             try await APRelay.configure(app)
             app.actorFetcher = MockActorFetcher()
         }) { app in

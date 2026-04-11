@@ -1,4 +1,4 @@
-import Fluent
+import Queues
 import Vapor
 
 struct AdminAPIController: RouteCollection {
@@ -16,35 +16,32 @@ struct AdminAPIController: RouteCollection {
     // MARK: - Subscribers
 
     @Sendable
-    private func listSubscribers(req: Request) async throws -> [Subscriber.DTO] {
+    private func listSubscribers(req: Request) async throws -> [Subscriber] {
         let stateFilter = req.query[String.self, at: "state"]
-        var query = Subscriber.query(on: req.db)
-        if let stateFilter, let state = SubscriberState(rawValue: stateFilter) {
-            query = query.filter(\.$state == state)
-        }
-        return try await query.all().map(\.toDTO)
+        let state = stateFilter.flatMap { SubscriberState(rawValue: $0) }
+        return try await req.repository.getAllSubscribers(state: state)
     }
 
     @Sendable
     private func acceptSubscriber(req: Request) async throws -> AdminResponse {
         let domain = req.parameters.get("domain")!
 
-        guard
-            let subscriber = try await Subscriber.query(on: req.db)
-                .filter(\.$domain == domain)
-                .first()
-        else {
+        guard var subscriber = try await req.repository.getSubscriber(domain: domain) else {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
 
         subscriber.state = .accepted
-        try await subscriber.save(on: req.db)
+        try await req.repository.saveSubscriber(subscriber)
 
-        req.deliveryService.enqueueAccept(
-            to: subscriber.inboxURL,
-            followActivityID: subscriber.followActivityID,
-            followerActorID: subscriber.actorID,
-            followObjectURI: subscriber.followObjectURI
+        try await req.queue.dispatch(
+            AcceptJob.self,
+            AcceptPayload(
+                inboxURL: subscriber.inboxURL,
+                followActivityID: subscriber.followActivityID,
+                followerActorID: subscriber.actorID,
+                followObjectURI: subscriber.followObjectURI
+            ),
+            maxRetryCount: 5
         )
 
         return AdminResponse(status: "accepted", domain: domain)
@@ -54,22 +51,22 @@ struct AdminAPIController: RouteCollection {
     private func rejectSubscriber(req: Request) async throws -> AdminResponse {
         let domain = req.parameters.get("domain")!
 
-        guard
-            let subscriber = try await Subscriber.query(on: req.db)
-                .filter(\.$domain == domain)
-                .first()
-        else {
+        guard var subscriber = try await req.repository.getSubscriber(domain: domain) else {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
 
         subscriber.state = .rejected
-        try await subscriber.save(on: req.db)
+        try await req.repository.saveSubscriber(subscriber)
 
-        req.deliveryService.enqueueReject(
-            to: subscriber.inboxURL,
-            followActivityID: subscriber.followActivityID,
-            followerActorID: subscriber.actorID,
-            followObjectURI: subscriber.followObjectURI
+        try await req.queue.dispatch(
+            RejectJob.self,
+            RejectPayload(
+                inboxURL: subscriber.inboxURL,
+                followActivityID: subscriber.followActivityID,
+                followerActorID: subscriber.actorID,
+                followObjectURI: subscriber.followObjectURI
+            ),
+            maxRetryCount: 5
         )
 
         return AdminResponse(status: "rejected", domain: domain)
@@ -79,45 +76,33 @@ struct AdminAPIController: RouteCollection {
     private func removeSubscriber(req: Request) async throws -> AdminResponse {
         let domain = req.parameters.get("domain")!
 
-        guard
-            let subscriber = try await Subscriber.query(on: req.db)
-                .filter(\.$domain == domain)
-                .first()
-        else {
+        guard try await req.repository.getSubscriber(domain: domain) != nil else {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
 
-        try await subscriber.delete(on: req.db)
+        try await req.repository.deleteSubscriber(domain: domain)
         return AdminResponse(status: "removed", domain: domain)
     }
 
     // MARK: - Blocked Domains
 
     @Sendable
-    private func listBlockedDomains(req: Request) async throws -> [BlockedDomain.DTO] {
-        try await BlockedDomain.query(on: req.db).all().map(\.toDTO)
+    private func listBlockedDomains(req: Request) async throws -> [BlockedDomain] {
+        try await req.repository.getAllBlockedDomains()
     }
 
     @Sendable
     private func blockDomain(req: Request) async throws -> AdminResponse {
         let body = try req.content.decode(BlockRequest.self)
 
-        let existing = try await BlockedDomain.query(on: req.db)
-            .filter(\.$domain == body.domain)
-            .first()
-
-        if existing != nil {
+        let added = try await req.repository.blockDomain(body.domain, reason: body.reason)
+        if !added {
             throw Abort(.conflict, reason: "Domain already blocked")
         }
 
-        let blocked = BlockedDomain(domain: body.domain, reason: body.reason)
-        try await blocked.save(on: req.db)
-
-        if let subscriber = try await Subscriber.query(on: req.db)
-            .filter(\.$domain == body.domain)
-            .first()
-        {
-            try await subscriber.delete(on: req.db)
+        // Also remove subscriber if exists.
+        if try await req.repository.getSubscriber(domain: body.domain) != nil {
+            try await req.repository.deleteSubscriber(domain: body.domain)
         }
 
         return AdminResponse(status: "blocked", domain: body.domain)
@@ -127,15 +112,11 @@ struct AdminAPIController: RouteCollection {
     private func unblockDomain(req: Request) async throws -> AdminResponse {
         let domain = req.parameters.get("domain")!
 
-        guard
-            let blocked = try await BlockedDomain.query(on: req.db)
-                .filter(\.$domain == domain)
-                .first()
-        else {
+        let removed = try await req.repository.unblockDomain(domain)
+        if !removed {
             throw Abort(.notFound, reason: "Domain not blocked")
         }
 
-        try await blocked.delete(on: req.db)
         return AdminResponse(status: "unblocked", domain: domain)
     }
 }
