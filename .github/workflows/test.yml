@@ -1,0 +1,67 @@
+name: Test
+
+on:
+  push:
+    branches: [main, develop, 'release/*', 'hotfix/*', 'support/*']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
+    env:
+      VERBOSE: ${{ runner.debug && '-v' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install swiftly and Swift (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -O https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz
+          tar zxf swiftly-$(uname -m).tar.gz
+          ./swiftly init -y --skip-install
+          . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+          hash -r
+          swiftly install --post-install-file=post-install.sh
+          if [ -f post-install.sh ]; then
+            chmod u+x post-install.sh && sudo ./post-install.sh
+          fi
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+      - name: Install swiftly and Swift (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -O https://download.swift.org/swiftly/darwin/swiftly.pkg
+          installer -pkg swiftly.pkg -target CurrentUserHomeDirectory
+          ~/.swiftly/bin/swiftly init -y --skip-install
+          . "${SWIFTLY_HOME_DIR:-$HOME/.swiftly}/env.sh"
+          hash -r
+          swiftly install --post-install-file=post-install.sh
+          if [ -f post-install.sh ]; then
+            chmod u+x post-install.sh && sudo ./post-install.sh
+          fi
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Resolve dependencies
+        run: swift package resolve ${{ env.VERBOSE }}
+
+      - name: Build
+        run: swift build ${{ env.VERBOSE }}
+
+      - name: Test
+        run: swift test ${{ env.VERBOSE }}
