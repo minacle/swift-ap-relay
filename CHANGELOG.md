@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub Actions deploy workflow for multi-platform Docker image builds (amd64/arm64) pushed to GitHub Container Registry
 - GitHub Actions test workflow with swiftly-based Swift toolchain management across Ubuntu and macOS runners
 - Allow-failure for macOS CI jobs pending upstream swift-configuration fix (apple/swift-configuration#178)
 - `.swift-version` file for consistent Swift toolchain pinning via swiftly
