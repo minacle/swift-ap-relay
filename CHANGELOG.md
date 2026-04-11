@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AdminConnection struct for CLI admin commands to specify custom API endpoint via `--url`, `--hostname`, `--port`, `--tls`, or `--unix-socket` flags
 - Leaf templating engine for server-side HTML rendering with `index.leaf` template
 - RelayRepository protocol with RedisRelayRepository implementation for Redis-backed data access
 - Vapor Queues job system with DeliveryJob, AcceptJob, and RejectJob for reliable activity delivery
@@ -27,11 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Models are now plain Codable structs instead of Fluent Model classes
 - Environment variable `DATABASE_URL` replaced by `REDIS_URL` (default: `redis://localhost:6379`)
 - Docker Compose uses Valkey 8 instead of a relational database
+- Consolidate `RELAY_DOMAIN`, `RELAY_SCHEME`, `RELAY_HOST`, `RELAY_PORT` into single `RELAY_URL` environment variable
 - Refactor admin CLI commands (accept, reject, block, unblock, list-subscribers) to use Admin REST API client instead of direct database access
 - Use constant-time comparison for admin token authentication via SHA256 digest equality
 
 ### Removed
 
+- `RELAY_DOMAIN`, `RELAY_SCHEME`, `RELAY_HOST`, `RELAY_PORT` environment variables (replaced by `RELAY_URL`)
+- Manual HTTP server hostname/port configuration from `configure.swift`
 - Fluent ORM, SQLite driver, and PostgreSQL driver dependencies
 - All database migration files
 - DeliveryService actor with in-memory AsyncStream work queue

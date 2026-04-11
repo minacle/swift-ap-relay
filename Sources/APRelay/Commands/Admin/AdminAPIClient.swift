@@ -63,16 +63,18 @@ struct AdminAPIClient: Sendable {
 
     /// Creates an Admin API client from the application context.
     ///
-    /// - Parameter app: The Vapor application providing client and configuration.
+    /// - Parameters:
+    ///   - app: The Vapor application providing client and configuration.
+    ///   - connection: Connection parameters from CLI flags. Falls back to `config.baseURL`.
     /// - Throws: `AdminAPIError.notConfigured` if `ADMIN_TOKEN` is empty.
-    init(app: Application) throws {
+    init(app: Application, connection: AdminConnection = AdminConnection(url: nil, hostname: nil, port: nil, tls: false, unixSocket: nil)) throws {
         let config = app.relayConfig
         guard !config.adminToken.isEmpty else {
             throw AdminAPIError.notConfigured
         }
         self.init(
             client: app.client,
-            baseURL: "\(config.scheme)://\(config.domain):\(config.port)",
+            baseURL: connection.resolvedBaseURL(config: config),
             adminToken: config.adminToken
         )
     }

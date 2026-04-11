@@ -294,7 +294,7 @@ struct AdminAPITests {
     @Test("Admin endpoints with ADMIN_TOKEN unset return 403")
     func noAdminToken() async throws {
         try await withApp(configure: { app in
-            setenv("RELAY_DOMAIN", "localhost", 1)
+            setenv("RELAY_URL", "http://localhost", 1)
             setenv("ADMIN_TOKEN", "", 1)
             app.repositoryOverride = MockRelayRepository()
             try await APRelay.configure(app)

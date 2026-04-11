@@ -20,10 +20,6 @@ func configure(_ app: Application) async throws {
     // Store config in app storage.
     app.relayConfig = config
 
-    // Configure HTTP server.
-    app.http.server.configuration.hostname = config.host
-    app.http.server.configuration.port = config.port
-
     // Configure Redis and Queues.
     if app.environment != .testing {
         let redisConfig = try RedisConfiguration(url: config.redisURL)
