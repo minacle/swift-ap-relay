@@ -62,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All database migration files
 - DeliveryService actor with in-memory AsyncStream work queue
 
+### Security
+
+- Unify admin API authentication error responses to prevent configuration state disclosure; all failure cases (token not set, missing header, invalid token) now return identical `401 Unauthorized` with server-side warning logs for operator debugging
+
 ### Fixed
 
 - Fix inaccurate subscriber count in relay/forward log messages when sender's inbox URL is not in the subscriber list

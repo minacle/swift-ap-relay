@@ -292,7 +292,7 @@ struct AdminAPITests {
         }
     }
 
-    @Test("Admin endpoints with ADMIN_TOKEN unset return 403")
+    @Test("Admin endpoints with ADMIN_TOKEN unset return 401")
     func noAdminToken() async throws {
         try await withApp(configure: { app in
             app.repositoryOverride = MockRelayRepository()
@@ -304,7 +304,7 @@ struct AdminAPITests {
             app.actorFetcher = MockActorFetcher()
         }) { app in
             try await app.testing().test(.GET, "api/admin/subscribers") { res async in
-                #expect(res.status == .forbidden)
+                #expect(res.status == .unauthorized)
             }
         }
     }

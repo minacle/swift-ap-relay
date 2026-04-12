@@ -10,11 +10,13 @@ struct AdminAuthMiddleware: AsyncMiddleware {
         let config = request.relayConfig
 
         guard !config.adminToken.isEmpty else {
-            throw Abort(.forbidden, reason: "Admin API not configured (ADMIN_TOKEN not set)")
+            request.logger.warning("Admin API request denied: ADMIN_TOKEN is not configured")
+            throw Abort(.unauthorized, reason: "Unauthorized")
         }
 
         guard let bearer = request.headers.bearerAuthorization else {
-            throw Abort(.unauthorized, reason: "Missing Authorization header")
+            request.logger.warning("Admin API request denied: missing Authorization header")
+            throw Abort(.unauthorized, reason: "Unauthorized")
         }
 
         // Constant-time comparison via HMAC: MessageAuthenticationCode's == is guaranteed constant-time.
@@ -28,7 +30,8 @@ struct AdminAuthMiddleware: AsyncMiddleware {
             using: SymmetricKey(data: Data(bearer.token.utf8))
         )
         guard expectedMAC == candidateMAC else {
-            throw Abort(.unauthorized, reason: "Invalid admin token")
+            request.logger.warning("Admin API request denied: invalid token")
+            throw Abort(.unauthorized, reason: "Unauthorized")
         }
 
         return try await next.respond(to: request)
