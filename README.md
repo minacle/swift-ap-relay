@@ -4,6 +4,9 @@ An ActivityPub relay server built with Swift.
 
 APRelay relays activities between federated instances, enabling cross-instance content discovery. It supports subscriber management, domain blocking, restricted mode (allowlist), and HTTP Signature verification.
 
+> [!WARNING]
+> This project is still in early development and has **not been tested in production environments**. Use at your own risk.
+
 ## Features
 
 - ActivityPub relay (Create, Announce, etc.)
