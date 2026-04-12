@@ -31,6 +31,6 @@ extension Request {
         if let override = application.storage[RepositoryOverrideKey.self] {
             return override
         }
-        return RedisRelayRepository(redis: self.redis)
+        return RedisRelayRepository(redis: self.application.redis)
     }
 }

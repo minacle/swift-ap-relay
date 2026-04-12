@@ -5,11 +5,11 @@ import Vapor
 ///
 /// Uses `SET key value NX EX ttl` for atomic check-and-set with
 /// automatic TTL expiration. Key schema: `activity_dedup:{activityID}`.
-struct RedisActivityDeduplicator: ActivityDeduplicating, @unchecked Sendable {
-    let redis: any RedisClient
+struct RedisActivityDeduplicator: ActivityDeduplicating, Sendable {
+    let redis: any RedisClient & Sendable
     let ttl: Int
 
-    init(redis: any RedisClient, ttl: Int = 3600) {
+    init(redis: any RedisClient & Sendable, ttl: Int = 3600) {
         self.redis = redis
         self.ttl = ttl
     }

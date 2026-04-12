@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HTTPSignature.verify()` no longer accepts an unused `body` parameter
 - Actor fetch Accept header now uses spec-compliant `application/ld+json; profile="https://www.w3.org/ns/activitystreams"` with `application/activity+json` fallback
 - Replace `ISO8601DateFormatter` with `Date.ISO8601FormatStyle` in RedisRelayRepository, removing `nonisolated(unsafe)` static property
+- Replace `@unchecked Sendable` on `RedisRelayRepository` and `RedisActivityDeduplicator` with compiler-verified `Sendable` by storing `any RedisClient & Sendable` (backed by vapor/redis `Application.Redis`)
 - Mark `@preconcurrency import RediStack` with `@unsafe` to acknowledge memory safety implications under strict checking
 - Replace inline HTML generation in IndexController with Leaf template rendering
 - Rewrite Dockerfile to follow Vapor recommended template with jemalloc, build caching, non-root user, and resource staging

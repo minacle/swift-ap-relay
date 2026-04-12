@@ -31,6 +31,6 @@ extension Request {
         if let override = application.storage[DeduplicatorOverrideKey.self] {
             return override
         }
-        return RedisActivityDeduplicator(redis: self.redis)
+        return RedisActivityDeduplicator(redis: self.application.redis)
     }
 }

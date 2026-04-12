@@ -11,8 +11,8 @@ import Vapor
 /// - `blocked_domain:{domain}` — Hash with reason/createdAt
 /// - `allowed_domains` — Set of allowed domain strings
 /// - `relay_settings` — Hash of key-value settings
-struct RedisRelayRepository: RelayRepository, @unchecked Sendable {
-    let redis: any RedisClient
+struct RedisRelayRepository: RelayRepository, Sendable {
+    let redis: any RedisClient & Sendable
 
     private static let dateFormatStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
