@@ -8,6 +8,11 @@ import Redis
 import Vapor
 
 func configure(_ app: Application) async throws {
+    // Register shared JSON encoder for deterministic key ordering (cache-friendly).
+    ContentConfiguration.global.use(encoder: JSONEncoder.apRelay, for: .json)
+    ContentConfiguration.global.use(encoder: JSONEncoder.apRelay, for: .init(type: "application", subType: "activity+json"))
+    ContentConfiguration.global.use(encoder: JSONEncoder.apRelay, for: .init(type: "application", subType: "jrd+json"))
+
     // Bootstrap Prometheus metrics (once per process).
     if app.environment != .testing {
         let registry = PrometheusCollectorRegistry()

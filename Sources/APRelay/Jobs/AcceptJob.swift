@@ -43,7 +43,7 @@ struct AcceptJob: AsyncJob {
             published: ISO8601DateFormatter().string(from: Date())
         )
 
-        let data = try JSONEncoder().encode(accept)
+        let data = try JSONEncoder.apRelay.encode(accept)
 
         try await SignedDeliveryHelper.send(
             activity: data,

@@ -221,7 +221,7 @@ struct InboxController: RouteCollection {
             published: ISO8601DateFormatter().string(from: Date())
         )
 
-        let announceData = try JSONEncoder().encode(announce)
+        let announceData = try JSONEncoder.apRelay.encode(announce)
 
         let targetInboxes = inboxURLs.filter { $0 != subscriber.inboxURL }
         for inbox in targetInboxes {

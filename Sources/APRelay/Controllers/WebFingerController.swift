@@ -6,7 +6,7 @@ struct WebFingerController: RouteCollection {
     }
 
     @Sendable
-    private func webfinger(req: Request) async throws -> Response {
+    private func webfinger(req: Request) async throws -> WebFingerResponse {
         let config = req.relayConfig
 
         guard let resource = req.query[String.self, at: "resource"] else {
@@ -18,7 +18,7 @@ struct WebFingerController: RouteCollection {
             throw Abort(.notFound, reason: "Unknown resource")
         }
 
-        let response = WebFingerResponse(
+        return WebFingerResponse(
             subject: expectedResource,
             links: [
                 WebFingerLink(
@@ -28,22 +28,28 @@ struct WebFingerController: RouteCollection {
                 ),
             ]
         )
-
-        let data = try JSONEncoder().encode(response)
-        return Response(
-            status: .ok,
-            headers: ["Content-Type": "application/jrd+json"],
-            body: .init(data: data)
-        )
     }
 }
 
-private struct WebFingerResponse: Codable {
+private struct WebFingerResponse: Content {
+    static var defaultContentType: HTTPMediaType {
+        .init(type: "application", subType: "jrd+json")
+    }
+
     let subject: String
     let links: [WebFingerLink]
+
+    func encodeResponse(for request: Request) async throws -> Response {
+        let response = Response()
+        try response.content.encode(self)
+        // Vapor's JSONEncoder always overrides Content-Type to application/json;
+        // restore the intended media type.
+        response.headers.contentType = Self.defaultContentType
+        return response
+    }
 }
 
-private struct WebFingerLink: Codable {
+private struct WebFingerLink: Codable, Sendable {
     let rel: String
     let type: String
     let href: String
