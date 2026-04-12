@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Relicense project from AGPL-3.0 to Apache License 2.0
+
 ### Added
 
 - Project README with feature overview, build/run instructions, Docker guide, environment variables reference, and admin CLI documentation
