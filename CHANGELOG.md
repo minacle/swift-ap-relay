@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Extract inline CSS from homepage template into external stylesheet (`Public/css/style.css`) served via Vapor `FileMiddleware`
 - Use shared `JSONEncoder` with deterministic sorted keys for all JSON output (ActivityPub, WebFinger, delivery jobs), registered globally via Vapor `ContentConfiguration`
 - Adopt Vapor `Content` protocol for `ActivityJSON` and `WebFingerResponse` instead of manual encoding and raw `Response` construction
 - Standardize naming: display name to `APRelay` (PascalCase, matching Swift package/User-Agent), NodeInfo software name and Docker image tag to `ap-relay` (hyphenated, matching repository/registry naming)

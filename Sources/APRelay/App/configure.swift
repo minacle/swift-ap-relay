@@ -63,6 +63,9 @@ func configure(_ app: Application) async throws {
     // Configure Leaf view renderer.
     app.views.use(.leaf)
 
+    // Serve static files from the Public directory.
+    app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+
     // Configure localizer with translation files.
     let localesDir = app.directory.resourcesDirectory + "Locales"
     app.localizer = try Localizer(directory: localesDir)
