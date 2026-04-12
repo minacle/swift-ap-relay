@@ -38,6 +38,11 @@ func configure(_ app: Application) async throws {
         app.queues.add(DeliveryJob())
         app.queues.add(AcceptJob())
         app.queues.add(RejectJob())
+        app.queues.add(NodeInfoFetchJob())
+
+        // Schedule periodic NodeInfo check.
+        app.queues.schedule(NodeInfoCheckJob())
+            .every(seconds: config.nodeInfoCheckInterval)
     }
 
     // Server-only setup: signing key and in-process queue workers require
@@ -51,9 +56,10 @@ func configure(_ app: Application) async throws {
         // Redis's lifecycle handler (which creates connection pools) runs first.
         app.lifecycle.use(SigningKeyBootstrap())
 
-        // Start queue workers in non-testing environments.
+        // Start queue workers and scheduled jobs in non-testing environments.
         if app.environment != .testing {
             try app.queues.startInProcessJobs()
+            try app.queues.startScheduledJobs()
         }
     }
 

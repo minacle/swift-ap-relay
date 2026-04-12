@@ -19,6 +19,10 @@ struct IndexController: RouteCollection {
 
         let sortedSubscribers = subscribers.sorted { $0.domain < $1.domain }
 
+        // Fetch cached NodeInfo for all subscriber domains.
+        let domains = sortedSubscribers.map(\.domain)
+        let nodeInfoMap = try await req.nodeInfoCache.getAllNodeInfo(domains: domains)
+
         // Resolve locale-specific name, description, and footer
         let preferredLocales = req.preferredLocales
         let relayName = config.relayName.value(for: preferredLocales) ?? config.domain
@@ -34,10 +38,19 @@ struct IndexController: RouteCollection {
             hasDescription: !description.isEmpty,
             footer: footer,
             hasFooter: !footer.isEmpty,
-            subscribers: sortedSubscribers.map {
-                SubscriberItem(
-                    domain: $0.domain,
-                    joinedAt: $0.createdAt.map { dateFormatter.string(from: $0) }
+            subscribers: sortedSubscribers.map { subscriber in
+                let info = nodeInfoMap[subscriber.domain]
+                return SubscriberItem(
+                    domain: subscriber.domain,
+                    joinedAt: subscriber.createdAt.map { dateFormatter.string(from: $0) },
+                    softwareName: info?.softwareName,
+                    softwareVersion: info?.softwareVersion,
+                    hasRegistrationInfo: info?.openRegistrations != nil,
+                    isOpenRegistrations: info?.openRegistrations ?? false,
+                    staffAccounts: info?.staffAccounts ?? [],
+                    hasStaff: !(info?.staffAccounts ?? []).isEmpty,
+                    isReachable: info?.isReachable ?? false,
+                    hasBeenChecked: info != nil
                 )
             },
             subscriberCount: subscribers.count,
@@ -62,7 +75,9 @@ struct IndexController: RouteCollection {
             t_statusRestricted: localizer.localize("status_restricted", locale: locale),
             t_statusAutoAccept: localizer.localize("status_auto_accept", locale: locale),
             t_statusManualAccept: localizer.localize("status_manual_accept", locale: locale),
-            t_joined: localizer.localize("joined", locale: locale)
+            t_joined: localizer.localize("joined", locale: locale),
+            t_openRegistrations: localizer.localize("open_registrations", locale: locale),
+            t_closedRegistrations: localizer.localize("closed_registrations", locale: locale)
         )
 
         return try await req.view.render("index", context)
@@ -103,9 +118,19 @@ private struct IndexContext: Encodable {
     let t_statusAutoAccept: String
     let t_statusManualAccept: String
     let t_joined: String
+    let t_openRegistrations: String
+    let t_closedRegistrations: String
 }
 
 private struct SubscriberItem: Encodable {
     let domain: String
     let joinedAt: String?
+    let softwareName: String?
+    let softwareVersion: String?
+    let hasRegistrationInfo: Bool
+    let isOpenRegistrations: Bool
+    let staffAccounts: [String]
+    let hasStaff: Bool
+    let isReachable: Bool
+    let hasBeenChecked: Bool
 }

@@ -11,6 +11,7 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         adminToken: Environment.get("ADMIN_TOKEN") ?? "",
         manualAccept: Environment.get("MANUAL_ACCEPT") == "true",
         restrictedMode: Environment.get("RESTRICTED_MODE") == "true",
+        nodeInfoCheckInterval: max(Environment.get("NODEINFO_CHECK_INTERVAL").flatMap(Int.init) ?? 300, 60),
         relayName: buildLocalizedString(envPrefix: "RELAY_NAME"),
         relayDescription: buildLocalizedString(envPrefix: "RELAY_DESCRIPTION"),
         relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER")

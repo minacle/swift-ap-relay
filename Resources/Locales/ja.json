@@ -14,5 +14,7 @@
     "status_restricted": "制限",
     "status_auto_accept": "自動承認",
     "status_manual_accept": "手動承認",
-    "joined": "参加"
+    "joined": "参加",
+    "open_registrations": "公開",
+    "closed_registrations": "非公開"
 }

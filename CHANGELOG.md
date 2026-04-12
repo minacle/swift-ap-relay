@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Periodic NodeInfo fetching for subscriber instances with software name/version, registration status, staff accounts, and reachability displayed on the homepage
+- `NODEINFO_CHECK_INTERVAL` environment variable to configure NodeInfo check frequency (default: 300 seconds, minimum: 60)
+
 ### Changed
 
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology

@@ -14,5 +14,7 @@
     "status_restricted": "Restricted",
     "status_auto_accept": "Auto Accept",
     "status_manual_accept": "Manual Review",
-    "joined": "Joined"
+    "joined": "Joined",
+    "open_registrations": "Open",
+    "closed_registrations": "Closed"
 }

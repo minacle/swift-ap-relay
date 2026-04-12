@@ -63,7 +63,41 @@
             <div class="instance-grid">
                 #for(subscriber in subscribers):
                 <div class="instance-item">
-                    <div class="instance-domain">#(subscriber.domain)</div>
+                    <div class="instance-header">
+                        <img class="instance-favicon"
+                             src="https://#(subscriber.domain)/favicon.ico"
+                             alt="" width="16" height="16" loading="lazy"
+                             onerror="this.style.display='none'">
+                        <a class="instance-domain" href="https://#(subscriber.domain)" target="_blank" rel="noopener">#(subscriber.domain)</a>
+                        #if(subscriber.hasBeenChecked):
+                            #if(subscriber.isReachable):
+                            <span class="status-dot status-ok" title="Online"></span>
+                            #else:
+                            <span class="status-dot status-down" title="Unreachable"></span>
+                            #endif
+                        #else:
+                            <span class="status-dot status-unknown" title="Checking..."></span>
+                        #endif
+                    </div>
+                    #if(subscriber.softwareName):
+                    <div class="instance-meta">
+                        <span class="instance-software">#(subscriber.softwareName)#if(subscriber.softwareVersion): #(subscriber.softwareVersion)#endif</span>
+                        #if(subscriber.hasRegistrationInfo):
+                            #if(subscriber.isOpenRegistrations):
+                            <span class="badge badge-sm badge-open">#(t_openRegistrations)</span>
+                            #else:
+                            <span class="badge badge-sm badge-muted">#(t_closedRegistrations)</span>
+                            #endif
+                        #endif
+                    </div>
+                    #endif
+                    #if(subscriber.hasStaff):
+                    <div class="instance-staff">
+                        #for(staff in subscriber.staffAccounts):
+                        <a href="#(staff)" class="staff-link" target="_blank" rel="noopener">#(staff)</a>
+                        #endfor
+                    </div>
+                    #endif
                     #if(subscriber.joinedAt):
                     <div class="instance-joined">#(t_joined) #(subscriber.joinedAt)</div>
                     #endif

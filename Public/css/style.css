@@ -181,7 +181,7 @@ header h1 {
 /* Instance grid */
 .instance-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.75rem;
     margin-top: 1rem;
 }
@@ -193,10 +193,75 @@ header h1 {
     padding: 0.7rem 0.9rem;
 }
 
+.instance-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.instance-favicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
 .instance-domain {
     font-weight: 500;
     font-size: 0.9rem;
     color: var(--text);
+}
+
+a.instance-domain:hover {
+    color: var(--accent-hover);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.status-ok {
+    background: var(--badge-open-text);
+}
+
+.status-down {
+    background: var(--badge-restricted-text);
+}
+
+.status-unknown {
+    background: var(--text-muted);
+}
+
+.instance-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+}
+
+.instance-software {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.badge-sm {
+    padding: 0.1rem 0.4rem;
+    font-size: 0.7rem;
+}
+
+.instance-staff {
+    font-size: 0.75rem;
+    margin-top: 0.15rem;
+}
+
+.staff-link {
+    color: var(--accent);
+    font-size: 0.75rem;
 }
 
 .instance-joined {

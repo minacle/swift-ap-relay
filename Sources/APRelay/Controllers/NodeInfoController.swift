@@ -38,48 +38,7 @@ struct NodeInfoController: RouteCollection {
                 localPosts: 0
             ),
             openRegistrations: !config.restrictedMode,
-            metadata: NodeInfoMetadata(peers: peers)
+            metadata: NodeInfoMetadata(peers: peers, staffAccounts: nil)
         )
     }
-}
-
-// MARK: - Response Types
-
-struct NodeInfoWellKnown: Content {
-    let links: [NodeInfoLink]
-}
-
-struct NodeInfoLink: Codable, Sendable {
-    let rel: String
-    let href: String
-}
-
-struct NodeInfoResponse: Content {
-    let version: String
-    let software: NodeInfoSoftware
-    let protocols: [String]
-    let usage: NodeInfoUsage
-    let openRegistrations: Bool
-    let metadata: NodeInfoMetadata
-}
-
-struct NodeInfoSoftware: Codable, Sendable {
-    let name: String
-    let version: String
-    let repository: String
-}
-
-struct NodeInfoUsage: Codable, Sendable {
-    let users: NodeInfoUsers
-    let localPosts: Int
-}
-
-struct NodeInfoUsers: Codable, Sendable {
-    let total: Int
-    let activeMonth: Int
-    let activeHalfyear: Int
-}
-
-struct NodeInfoMetadata: Codable, Sendable {
-    let peers: [String]
 }

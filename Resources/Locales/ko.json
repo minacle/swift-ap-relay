@@ -14,5 +14,7 @@
     "status_restricted": "제한",
     "status_auto_accept": "자동 승인",
     "status_manual_accept": "수동 승인",
-    "joined": "가입"
+    "joined": "가입",
+    "open_registrations": "개방",
+    "closed_registrations": "비공개"
 }
