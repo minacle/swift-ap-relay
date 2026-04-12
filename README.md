@@ -88,12 +88,12 @@ docker pull ghcr.io/sinoru/swift-ap-relay:latest
 | `ADMIN_TOKEN` | Bearer token for Admin API authentication | (empty) |
 | `MANUAL_ACCEPT` | Require admin approval for new subscribers | `false` |
 | `RESTRICTED_MODE` | Only allow explicitly accepted domains | `false` |
-| `RELAY_NAME` | Relay name shown on the homepage and in User-Agent | (empty) |
+| `RELAY_NAME` | Relay name shown on the homepage and in User-Agent | domain from `RELAY_URL` |
 | `RELAY_DESCRIPTION` | HTML description shown on the homepage | (empty) |
 | `RELAY_FOOTER` | HTML footer shown on the homepage | (empty) |
 | `AP_RELAY_VERSION` | Override the version string (auto-detected from git if unset) | (auto-detected) |
 | `SOURCE_COMMIT` | Source commit hash for version display (auto-detected from git if unset) | (auto-detected) |
-| `LOG_LEVEL` | Logging level (`debug`, `info`, `notice`, `warning`, `error`) | `debug` |
+| `LOG_LEVEL` | Logging level (`trace`, `debug`, `info`, `notice`, `warning`, `error`, `critical`) | `notice` (production) / `info` (development) |
 
 ### Localized Environment Variables
 
