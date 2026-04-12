@@ -188,7 +188,7 @@ extension Application {
 ///
 /// Throws a fatal error if the value cannot be parsed.
 private func parseBindAddress(_ value: String) -> (hostname: String, port: Int) {
-    let parts = value.split(separator: ":", maxSplits: 1)
+    let parts = value.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
     if parts.count == 2 {
         let host = parts[0].isEmpty ? "0.0.0.0" : String(parts[0])
         guard let port = Int(parts[1]) else {
