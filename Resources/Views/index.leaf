@@ -81,11 +81,7 @@
         <div class="custom-footer">#unsafeHTML(footer)</div>
         #endif
         <div class="version-info">
-            #if(sourceURL):
-            <a href="#(sourceURL)">APRelay #(softwareVersion)#if(shortCommit): (#(shortCommit))#endif</a>
-            #else:
-            APRelay #(softwareVersion)
-            #endif
+            APRelay #(softwareVersion)#if(shortCommit): (#if(sourceURL):<a href="#(sourceURL)">#(shortCommit)</a>#else:#(shortCommit)#endif)#endif
         </div>
     </footer>
 </body>
