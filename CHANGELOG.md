@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `.dockerignore` symlink to `.gitignore` to exclude unnecessary files from Docker build context
+
 ### Changed
 
 - Relicense project from AGPL-3.0 to Apache License 2.0
