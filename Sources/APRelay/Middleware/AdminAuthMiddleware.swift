@@ -17,9 +17,17 @@ struct AdminAuthMiddleware: AsyncMiddleware {
             throw Abort(.unauthorized, reason: "Missing Authorization header")
         }
 
-        let tokenHash = SHA256.hash(data: Data(bearer.token.utf8))
-        let expectedHash = SHA256.hash(data: Data(config.adminToken.utf8))
-        guard tokenHash == expectedHash else {
+        // Constant-time comparison via HMAC: MessageAuthenticationCode's == is guaranteed constant-time.
+        let fixedMessage = Data("admin-token-verify".utf8)
+        let expectedMAC = HMAC<SHA256>.authenticationCode(
+            for: fixedMessage,
+            using: SymmetricKey(data: Data(config.adminToken.utf8))
+        )
+        let candidateMAC = HMAC<SHA256>.authenticationCode(
+            for: fixedMessage,
+            using: SymmetricKey(data: Data(bearer.token.utf8))
+        )
+        guard expectedMAC == candidateMAC else {
             throw Abort(.unauthorized, reason: "Invalid admin token")
         }
 

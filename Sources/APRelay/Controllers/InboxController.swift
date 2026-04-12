@@ -223,7 +223,8 @@ struct InboxController: RouteCollection {
 
         let announceData = try JSONEncoder().encode(announce)
 
-        for inbox in inboxURLs where inbox != subscriber.inboxURL {
+        let targetInboxes = inboxURLs.filter { $0 != subscriber.inboxURL }
+        for inbox in targetInboxes {
             try await req.queue.dispatch(
                 DeliveryJob.self,
                 DeliveryPayload(activity: announceData, inboxURL: inbox),
@@ -232,7 +233,7 @@ struct InboxController: RouteCollection {
         }
 
         req.logger.info(
-            "Relaying \(activity.type) from \(actorDomain) to \(inboxURLs.count - 1) subscribers"
+            "Relaying \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
         )
     }
 
@@ -256,7 +257,8 @@ struct InboxController: RouteCollection {
 
         let inboxURLs = try await repository.getAcceptedInboxURLs()
 
-        for inbox in inboxURLs where inbox != sender.inboxURL {
+        let targetInboxes = inboxURLs.filter { $0 != sender.inboxURL }
+        for inbox in targetInboxes {
             try await req.queue.dispatch(
                 DeliveryJob.self,
                 DeliveryPayload(activity: body, inboxURL: inbox),
@@ -265,7 +267,7 @@ struct InboxController: RouteCollection {
         }
 
         req.logger.info(
-            "Forwarding \(activity.type) from \(actorDomain) to \(inboxURLs.count - 1) subscribers"
+            "Forwarding \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
         )
     }
 
