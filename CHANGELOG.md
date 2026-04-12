@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Prometheus metrics endpoint moved to a dedicated server controlled by `METRICS_BIND` environment variable
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
 
 ### Fixed

@@ -56,6 +56,13 @@ func configure(_ app: Application) async throws {
         // Redis's lifecycle handler (which creates connection pools) runs first.
         app.lifecycle.use(SigningKeyBootstrap())
 
+        // Start a dedicated metrics server when METRICS_BIND is set.
+        if let metricsBind = Environment.get("METRICS_BIND"),
+           let registry = app.prometheusRegistry {
+            let (hostname, port) = parseBindAddress(metricsBind)
+            app.lifecycle.use(MetricsServerLifecycle(registry: registry, hostname: hostname, port: port))
+        }
+
         // Start queue workers and scheduled jobs in non-testing environments.
         if app.environment != .testing {
             try app.queues.startInProcessJobs()
@@ -143,5 +150,62 @@ extension Application {
     var prometheusRegistry: PrometheusCollectorRegistry? {
         get { storage[PrometheusRegistryKey.self] }
         set { storage[PrometheusRegistryKey.self] = newValue }
+    }
+}
+
+// MARK: - Metrics Server on Separate Port
+
+/// Parses a bind address string into hostname and port.
+///
+/// - `"0.0.0.0:9090"` → `("0.0.0.0", 9090)`
+/// - `":9090"` → `("0.0.0.0", 9090)`
+/// - `"9090"` → `("0.0.0.0", 9090)`
+///
+/// Throws a fatal error if the value cannot be parsed.
+private func parseBindAddress(_ value: String) -> (hostname: String, port: Int) {
+    let parts = value.split(separator: ":", maxSplits: 1)
+    if parts.count == 2 {
+        let host = parts[0].isEmpty ? "0.0.0.0" : String(parts[0])
+        guard let port = Int(parts[1]) else {
+            fatalError("Invalid METRICS_BIND port: \(parts[1]) (expected integer)")
+        }
+        return (host, port)
+    }
+    if let port = Int(value) {
+        return ("0.0.0.0", port)
+    }
+    fatalError("Invalid METRICS_BIND value: \(value) (expected [host]:port)")
+}
+
+private struct MetricsAppKey: StorageKey {
+    typealias Value = Application
+}
+
+private struct MetricsServerLifecycle: LifecycleHandler {
+    let registry: PrometheusCollectorRegistry
+    let hostname: String
+    let port: Int
+
+    func didBootAsync(_ application: Application) async throws {
+        let metricsApp = try await Application.make(application.environment)
+        metricsApp.http.server.configuration.hostname = hostname
+        metricsApp.http.server.configuration.port = port
+
+        let registry = self.registry
+        metricsApp.get("metrics") { _ in
+            registry.emitToString()
+        }
+
+        try await metricsApp.server.start(address: nil)
+        application.storage[MetricsAppKey.self] = metricsApp
+
+        application.logger.info("Metrics server started on \(hostname):\(port)")
+    }
+
+    func shutdownAsync(_ application: Application) async throws {
+        guard let metricsApp = application.storage[MetricsAppKey.self] else { return }
+        await metricsApp.server.shutdown()
+        try await metricsApp.asyncShutdown()
+        application.storage[MetricsAppKey.self] = nil
     }
 }

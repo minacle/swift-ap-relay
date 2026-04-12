@@ -17,7 +17,7 @@ APRelay relays activities between federated instances, enabling cross-instance c
 - Restricted mode (allowlist)
 - Redis-backed activity deduplication
 - Background job queue for reliable delivery
-- Prometheus metrics export (`/metrics`)
+- Prometheus metrics export on a dedicated port
 - WebFinger & NodeInfo 2.1 discovery
 - Multi-language homepage (English, Korean, Japanese) with `Accept-Language` detection
 - Dark mode & responsive homepage with status badges
@@ -72,6 +72,14 @@ docker run -p 8080:8080 \
   -e REDIS_URL=redis://your-redis:6379 \
   -e ADMIN_TOKEN=your-secret-token \
   ap-relay
+
+# With Prometheus metrics on port 9090
+docker run -p 8080:8080 -p 9090:9090 \
+  -e RELAY_URL=https://relay.example.com \
+  -e REDIS_URL=redis://your-redis:6379 \
+  -e ADMIN_TOKEN=your-secret-token \
+  -e METRICS_BIND=0.0.0.0:9090 \
+  ap-relay
 ```
 
 ### Container registry
@@ -96,6 +104,7 @@ docker pull ghcr.io/sinoru/swift-ap-relay:latest
 | `RELAY_FOOTER` | HTML footer shown on the homepage | (empty) |
 | `AP_RELAY_VERSION` | Override the version string (auto-detected from git if unset) | (auto-detected) |
 | `SOURCE_COMMIT` | Source commit hash for version display (auto-detected from git if unset) | (auto-detected) |
+| `METRICS_BIND` | Bind address for the Prometheus metrics server (e.g. `0.0.0.0:9090`). Disabled when unset. | (disabled) |
 | `LOG_LEVEL` | Logging level (`trace`, `debug`, `info`, `notice`, `warning`, `error`, `critical`) | `notice` (production) / `info` (development) |
 
 ### Localized Environment Variables
