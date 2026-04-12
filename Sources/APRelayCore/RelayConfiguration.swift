@@ -11,8 +11,9 @@ package struct RelayConfiguration: Sendable {
     package let adminToken: String
     package let manualAccept: Bool
     package let restrictedMode: Bool
-    package let relayDescription: String
-    package let relayFooter: String
+    package let relayName: LocalizedString
+    package let relayDescription: LocalizedString
+    package let relayFooter: LocalizedString
 
     package var actorURL: String {
         "\(baseURL)/actor"
@@ -28,8 +29,9 @@ package struct RelayConfiguration: Sendable {
         adminToken: String = "",
         manualAccept: Bool = false,
         restrictedMode: Bool = false,
-        relayDescription: String = "",
-        relayFooter: String = ""
+        relayName: LocalizedString = LocalizedString([:]),
+        relayDescription: LocalizedString = LocalizedString([:]),
+        relayFooter: LocalizedString = LocalizedString([:])
     ) {
         self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         if let url = URL(string: self.baseURL) {
@@ -41,6 +43,7 @@ package struct RelayConfiguration: Sendable {
         self.adminToken = adminToken
         self.manualAccept = manualAccept
         self.restrictedMode = restrictedMode
+        self.relayName = relayName
         self.relayDescription = relayDescription
         self.relayFooter = relayFooter
     }

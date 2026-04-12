@@ -1,0 +1,18 @@
+{
+    "how_to_subscribe": "購読方法",
+    "mastodon_misskey": "Mastodon / Misskey",
+    "mastodon_misskey_desc": "管理者設定で以下のリレーURLを追加してください：",
+    "pleroma_akkoma": "Pleroma / Akkoma",
+    "pleroma_akkoma_desc": "リレー設定で以下のアクターをフォローしてください：",
+    "others": "その他",
+    "others_desc": "お使いのサーバーのドキュメントをご確認ください。MastodonまたはPleromaのリレー形式に対応している可能性があります。",
+    "connected_instances": "接続中のインスタンス",
+    "no_instances": "接続中のインスタンスはまだありません。",
+    "restricted_notice": "このリレーは制限モードです。購読にはリレー管理者の事前承認が必要です。",
+    "manual_accept_notice": "新しい購読には手動承認が必要です。",
+    "status_open": "公開",
+    "status_restricted": "制限",
+    "status_auto_accept": "自動承認",
+    "status_manual_accept": "手動承認",
+    "joined": "参加"
+}

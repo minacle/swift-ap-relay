@@ -9,10 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Multi-language homepage with English, Korean, and Japanese translations, auto-selected via `Accept-Language` header
+- `LocalizedString` type for locale-aware string resolution with BCP 47 support and language/region fallback
+- `Localizer` i18n system with JSON translation files and Accept-Language quality factor parsing
+- `RELAY_NAME` environment variable for configuring the relay name shown on the homepage and in User-Agent
+- Per-locale environment variable overrides for `RELAY_NAME`, `RELAY_DESCRIPTION`, and `RELAY_FOOTER` (e.g. `RELAY_NAME__KO`)
+- `VersionGeneratorPlugin` build plugin for automatic version and commit detection from git at build time
+- `AppInfo` utility for runtime version, commit hash, source URL, and User-Agent string
+- `User-Agent` header on outgoing HTTP requests (actor fetching and activity delivery)
+- `Server` response header with relay version info
+- Dark mode support and responsive homepage redesign with status badges, instance grid, and subscriber join dates
+- `AP_RELAY_VERSION` and `SOURCE_COMMIT` environment variables for overriding auto-detected version info
+- Tests for `LocalizedString` locale resolution
 - `.dockerignore` symlink to `.gitignore` to exclude unnecessary files from Docker build context
 
 ### Changed
 
+- `RelayConfiguration.relayDescription` and `relayFooter` changed from `String` to `LocalizedString`
+- Homepage subscribers list is now sorted alphabetically by domain
+- NodeInfo version field now uses auto-detected version instead of hardcoded `0.1.0`
+- Homepage template rewritten with semantic HTML, CSS custom properties, and modern grid layout
+- `.dockerignore` changed from symlink to standalone file excluding `.build/` and `.git/`
+- `docker-compose.yml` adds explicit image reference for pre-built container
 - Relicense project from AGPL-3.0 to Apache License 2.0
 
 ### Added

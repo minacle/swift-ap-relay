@@ -12,11 +12,13 @@ protocol ActorFetcher: Sendable {
 struct HTTPActorFetcher: ActorFetcher {
     private let privateKey: _RSA.Signing.PrivateKey
     private let keyID: String
+    private let userAgent: String
     private let httpSignature = HTTPSignature()
 
-    init(privateKey: _RSA.Signing.PrivateKey, keyID: String) {
+    init(privateKey: _RSA.Signing.PrivateKey, keyID: String, userAgent: String) {
         self.privateKey = privateKey
         self.keyID = keyID
+        self.userAgent = userAgent
     }
 
     func fetchActor(url: String, client: Client) async throws -> RemoteActor {
@@ -38,6 +40,7 @@ struct HTTPActorFetcher: ActorFetcher {
             for (name, value) in signatureHeaders {
                 req.headers.replaceOrAdd(name: name, value: value)
             }
+            req.headers.replaceOrAdd(name: "User-Agent", value: userAgent)
             req.headers.replaceOrAdd(
                 name: "Accept",
                 value: "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\", application/activity+json"

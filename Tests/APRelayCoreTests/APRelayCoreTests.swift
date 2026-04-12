@@ -276,3 +276,67 @@ struct HTTPDateFormatterTests {
         #expect(date != nil)
     }
 }
+
+@Suite("LocalizedString Tests")
+struct LocalizedStringTests {
+    @Test("unlocalizedValue returns und key")
+    func unlocalizedValue() {
+        let ls = LocalizedString(["und": "Hello", "ko": "안녕"])
+        #expect(ls.unlocalizedValue() == "Hello")
+    }
+
+    @Test("unlocalizedValue returns nil when no und key")
+    func unlocalizedValueMissing() {
+        let ls = LocalizedString(["ko": "안녕"])
+        #expect(ls.unlocalizedValue() == nil)
+    }
+
+    @Test("Exact locale match")
+    func exactMatch() {
+        let ls = LocalizedString(["und": "Default", "ko": "한국어"])
+        #expect(ls.value(for: ["ko"]) == "한국어")
+    }
+
+    @Test("Language-only fallback from region preference")
+    func languageFallback() {
+        let ls = LocalizedString(["und": "Default", "zh": "中文"])
+        #expect(ls.value(for: ["zh-TW"]) == "中文")
+    }
+
+    @Test("Reverse match: language preference matches region key")
+    func reverseMatch() {
+        let ls = LocalizedString(["und": "Default", "zh-TW": "繁體中文"])
+        #expect(ls.value(for: ["zh"]) == "繁體中文")
+    }
+
+    @Test("Falls back to und when no locale matches")
+    func undFallback() {
+        let ls = LocalizedString(["und": "Default", "ko": "한국어"])
+        #expect(ls.value(for: ["fr"]) == "Default")
+    }
+
+    @Test("Returns nil when empty values")
+    func emptyValues() {
+        let ls = LocalizedString([:])
+        #expect(ls.value(for: ["ko"]) == nil)
+    }
+
+    @Test("Preference order is respected")
+    func preferenceOrder() {
+        let ls = LocalizedString(["und": "Default", "ko": "한국어", "en": "English"])
+        #expect(ls.value(for: ["ko", "en"]) == "한국어")
+        #expect(ls.value(for: ["en", "ko"]) == "English")
+    }
+
+    @Test("Second preference matches when first has no match")
+    func secondPreferenceMatch() {
+        let ls = LocalizedString(["und": "Default", "ko": "한국어"])
+        #expect(ls.value(for: ["fr", "ko"]) == "한국어")
+    }
+
+    @Test("Empty preferences falls back to und")
+    func emptyPreferences() {
+        let ls = LocalizedString(["und": "Default"])
+        #expect(ls.value(for: []) == "Default")
+    }
+}

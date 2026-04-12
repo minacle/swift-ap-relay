@@ -29,7 +29,7 @@ struct NodeInfoController: RouteCollection {
             version: "2.1",
             software: NodeInfoSoftware(
                 name: "aprelay",
-                version: "0.1.0",
+                version: AppInfo.version,
                 repository: "https://github.com/sinoru/swift-ap-relay"
             ),
             protocols: ["activitypub"],

@@ -16,6 +16,10 @@ let package = Package(
         .package(url: "https://github.com/vapor/leaf.git", from: "4.4.0"),
     ],
     targets: [
+        .plugin(
+            name: "VersionGeneratorPlugin",
+            capability: .buildTool()
+        ),
         .target(
             name: "APRelayCore",
             dependencies: [
@@ -33,7 +37,10 @@ let package = Package(
                 .product(name: "Prometheus", package: "swift-prometheus"),
                 .product(name: "Leaf", package: "leaf"),
             ],
-            swiftSettings: [.strictMemorySafety()]
+            swiftSettings: [.strictMemorySafety()],
+            plugins: [
+                .plugin(name: "VersionGeneratorPlugin"),
+            ]
         ),
         .testTarget(
             name: "APRelayCoreTests",

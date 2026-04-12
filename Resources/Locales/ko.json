@@ -1,0 +1,18 @@
+{
+    "how_to_subscribe": "구독 방법",
+    "mastodon_misskey": "Mastodon / Misskey",
+    "mastodon_misskey_desc": "관리자 설정에서 아래 릴레이 URL을 추가하세요:",
+    "pleroma_akkoma": "Pleroma / Akkoma",
+    "pleroma_akkoma_desc": "릴레이 설정에서 아래 액터를 팔로우하세요:",
+    "others": "기타",
+    "others_desc": "사용하시는 서버의 문서를 참고하세요. Mastodon 또는 Pleroma의 릴레이 형식을 따를 가능성이 높습니다.",
+    "connected_instances": "연결된 인스턴스",
+    "no_instances": "아직 연결된 인스턴스가 없습니다.",
+    "restricted_notice": "이 릴레이는 제한 모드입니다. 구독하려면 릴레이 관리자의 사전 승인이 필요합니다.",
+    "manual_accept_notice": "새로운 구독은 수동 승인이 필요합니다.",
+    "status_open": "개방",
+    "status_restricted": "제한",
+    "status_auto_accept": "자동 승인",
+    "status_manual_accept": "수동 승인",
+    "joined": "가입"
+}

@@ -1,6 +1,6 @@
 # APRelay
 
-An ActivityPub relay server built with Swift and Vapor.
+An ActivityPub relay server built with Swift.
 
 APRelay relays activities between federated instances, enabling cross-instance content discovery. It supports subscriber management, domain blocking, restricted mode (allowlist), and HTTP Signature verification.
 
@@ -16,6 +16,9 @@ APRelay relays activities between federated instances, enabling cross-instance c
 - Background job queue for reliable delivery
 - Prometheus metrics export (`/metrics`)
 - WebFinger & NodeInfo 2.1 discovery
+- Multi-language homepage (English, Korean, Japanese) with `Accept-Language` detection
+- Dark mode & responsive homepage with status badges
+- Version tracking with git-based auto-detection
 - Admin REST API & CLI commands
 
 ## Requirements
@@ -59,7 +62,8 @@ This starts the relay server and a Valkey (Redis-compatible) instance. The relay
 ### Using Docker directly
 
 ```bash
-docker build -t aprelay .
+docker build -t aprelay \
+  --build-arg SOURCE_COMMIT=$(git rev-parse HEAD) .
 docker run -p 8080:8080 \
   -e RELAY_URL=https://relay.example.com \
   -e REDIS_URL=redis://your-redis:6379 \
@@ -84,9 +88,25 @@ docker pull ghcr.io/sinoru/swift-ap-relay:latest
 | `ADMIN_TOKEN` | Bearer token for Admin API authentication | (empty) |
 | `MANUAL_ACCEPT` | Require admin approval for new subscribers | `false` |
 | `RESTRICTED_MODE` | Only allow explicitly accepted domains | `false` |
+| `RELAY_NAME` | Relay name shown on the homepage and in User-Agent | (empty) |
 | `RELAY_DESCRIPTION` | HTML description shown on the homepage | (empty) |
 | `RELAY_FOOTER` | HTML footer shown on the homepage | (empty) |
+| `AP_RELAY_VERSION` | Override the version string (auto-detected from git if unset) | (auto-detected) |
+| `SOURCE_COMMIT` | Source commit hash for version display (auto-detected from git if unset) | (auto-detected) |
 | `LOG_LEVEL` | Logging level (`debug`, `info`, `notice`, `warning`, `error`) | `debug` |
+
+### Localized Environment Variables
+
+`RELAY_NAME`, `RELAY_DESCRIPTION`, and `RELAY_FOOTER` support per-locale overrides via suffixed variants:
+
+| Suffix Pattern | Example | Locale |
+|----------------|---------|--------|
+| _(none)_ | `RELAY_NAME` | Default (any language) |
+| `__KO` | `RELAY_NAME__KO` | Korean |
+| `__JA` | `RELAY_NAME__JA` | Japanese |
+| `__ZH_TW` | `RELAY_NAME__ZH_TW` | Chinese (Taiwan) |
+
+The homepage automatically selects the best match based on the visitor's `Accept-Language` header.
 
 ## Admin CLI Commands
 

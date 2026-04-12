@@ -9,6 +9,10 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q dist-upgrade -y \
     && apt-get install -y libjemalloc-dev
 
+# Accept version info as build args so the plugin can bake them in
+ARG AP_RELAY_VERSION=""
+ARG SOURCE_COMMIT=""
+
 # Set up a build area
 WORKDIR /build
 
@@ -71,6 +75,12 @@ WORKDIR /app
 
 # Copy built executable and any staged resources from builder
 COPY --from=build --chown=vapor:vapor /staging /app
+
+# Inject version info for runtime override
+ARG AP_RELAY_VERSION=""
+ARG SOURCE_COMMIT=""
+ENV AP_RELAY_VERSION="${AP_RELAY_VERSION}"
+ENV SOURCE_COMMIT="${SOURCE_COMMIT}"
 
 # Provide configuration needed by the built-in crash reporter and some sensible default behaviors.
 ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=no,swift-backtrace=./swift-backtrace-static

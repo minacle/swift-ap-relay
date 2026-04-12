@@ -1,0 +1,18 @@
+{
+    "how_to_subscribe": "How to Subscribe",
+    "mastodon_misskey": "Mastodon / Misskey",
+    "mastodon_misskey_desc": "Add this relay URL in your admin settings:",
+    "pleroma_akkoma": "Pleroma / Akkoma",
+    "pleroma_akkoma_desc": "Follow this actor in your relay settings:",
+    "others": "Others",
+    "others_desc": "Consult the documentation for your server. It likely follows either Mastodon or Pleroma's relay format.",
+    "connected_instances": "Connected Instances",
+    "no_instances": "No connected instances yet.",
+    "restricted_notice": "This relay is in Restricted Mode. Servers need prior approval from the relay administrator.",
+    "manual_accept_notice": "New subscriptions require manual approval.",
+    "status_open": "Open",
+    "status_restricted": "Restricted",
+    "status_auto_accept": "Auto Accept",
+    "status_manual_accept": "Manual Review",
+    "joined": "Joined"
+}

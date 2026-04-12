@@ -36,10 +36,12 @@ enum SignedDeliveryHelper {
         )
 
         let uri = URI(string: inboxURL)
+        let userAgent = AppInfo.userAgent(config: config)
         let response = try await client.post(uri) { req in
             for (name, value) in headers {
                 req.headers.replaceOrAdd(name: name, value: value)
             }
+            req.headers.replaceOrAdd(name: "User-Agent", value: userAgent)
             req.body = ByteBuffer(data: activity)
         }
 

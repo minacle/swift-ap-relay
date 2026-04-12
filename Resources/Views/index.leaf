@@ -1,57 +1,349 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="#(locale)">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AP Relay - #(domain)</title>
+    <meta name="color-scheme" content="light dark">
+    <title>#(relayName)</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-            color: #333;
-            line-height: 1.6;
+        :root {
+            --bg: #ffffff;
+            --bg-surface: #f8f9fa;
+            --bg-card: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --border: #e2e8f0;
+            --accent: #6c5ce7;
+            --accent-hover: #5a4bd1;
+            --shadow: rgba(0, 0, 0, 0.06);
+            --code-bg: #f1f3f5;
+            --badge-open-bg: #d4edda;
+            --badge-open-text: #155724;
+            --badge-restricted-bg: #fff3cd;
+            --badge-restricted-text: #856404;
+            --badge-restricted-border: rgba(133, 100, 4, 0.3);
         }
-        h1 { color: #1a1a2e; }
-        .info { background: #f0f4f8; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
-        .info code { background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; }
-        .description { margin: 1rem 0; }
-        .instances { margin: 2rem 0; }
-        .instances ul { columns: 2; list-style: none; padding: 0; }
-        .instances li { padding: 0.25rem 0; }
-        footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; color: #666; }
-        .badge { display: inline-block; background: #6c5ce7; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d0d12;
+                --bg-surface: #16161e;
+                --bg-card: #1c1c28;
+                --text: #e0e0e8;
+                --text-secondary: #a0a0b0;
+                --text-muted: #606070;
+                --border: #2a2a3a;
+                --accent: #a29bfe;
+                --accent-hover: #8b82f8;
+                --shadow: rgba(0, 0, 0, 0.25);
+                --code-bg: #22222e;
+                --badge-open-bg: #1a3a2a;
+                --badge-open-text: #6fcf97;
+                --badge-restricted-bg: #3a3020;
+                --badge-restricted-text: #f2c94c;
+                --badge-restricted-border: rgba(242, 201, 76, 0.3);
+            }
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.65;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+            color: var(--text);
+        }
+
+        .header-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .badge-open {
+            background: var(--badge-open-bg);
+            color: var(--badge-open-text);
+        }
+
+        .badge-restricted {
+            background: var(--badge-restricted-bg);
+            color: var(--badge-restricted-text);
+        }
+
+        .badge-muted {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* Description */
+        .description {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* Notice */
+        .notice {
+            margin: 1rem 0;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .notice-restricted {
+            background: var(--badge-restricted-bg);
+            color: var(--badge-restricted-text);
+            border: 1px solid var(--badge-restricted-border);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 1px 3px var(--shadow);
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            margin: 0 0 1rem;
+        }
+
+        .card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 1rem 0 0.25rem;
+        }
+
+        .card h3:first-of-type {
+            margin-top: 0;
+        }
+
+        .card p {
+            margin: 0.25rem 0 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .relay-url {
+            display: block;
+            background: var(--code-bg);
+            padding: 0.6rem 0.8rem;
+            border-radius: 6px;
+            font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            color: var(--text);
+            margin: 0.5rem 0;
+        }
+
+        /* Instance grid */
+        .instance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .instance-item {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.7rem 0.9rem;
+        }
+
+        .instance-domain {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .instance-joined {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem 0;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 2.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .custom-footer {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .version-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .version-info a {
+            color: var(--text-muted);
+        }
+
+        .version-info a:hover {
+            color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 1.25rem 1rem;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .instance-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>AP Relay</h1>
-    <p><span class="badge">#(domain)</span></p>
-    #if(hasDescription):
-    <div class="description">#unsafeHTML(description)</div>
-    #endif
-    <div class="info">
-        <h2>How to Subscribe</h2>
-        <p><strong>Mastodon</strong> / <strong>Misskey</strong>: add this relay URL in your admin settings:</p>
-        <p><code>#(inboxURL)</code></p>
-        <p><strong>Pleroma</strong> / <strong>Akkoma</strong>: follow this actor in your relay settings:</p>
-        <p><code>#(actorURL)</code></p>
-    </div>
-    <div class="instances">
-        <h2>Connected Instances (#(subscriberCount))</h2>
-        #if(subscriberCount > 0):
-        <ul>
-            #for(subscriber in subscribers):
-            <li>#(subscriber.domain)</li>
-            #endfor
-        </ul>
-        #else:
-        <p>No connected instances yet.</p>
+    <header>
+        <h1>#(relayName)</h1>
+        <div class="header-meta">
+            #if(isRestrictedMode):
+            <span class="badge badge-restricted">#(t_statusRestricted)</span>
+            #else:
+            <span class="badge badge-open">#(t_statusOpen)</span>
+            #endif
+            #if(isManualAccept):
+            <span class="badge badge-muted">#(t_statusManualAccept)</span>
+            #else:
+            <span class="badge badge-muted">#(t_statusAutoAccept)</span>
+            #endif
+        </div>
+    </header>
+
+    <main>
+        #if(hasDescription):
+        <div class="description">#unsafeHTML(description)</div>
         #endif
-    </div>
-    #if(hasFooter):
-    <footer>#unsafeHTML(footer)</footer>
-    #endif
-    <p style="color: #999; font-size: 0.8rem;">Powered by <a href="https://github.com/sinoru/swift-ap-relay">AP Relay</a></p>
+
+        #if(isRestrictedMode):
+        <div class="notice notice-restricted">
+            #(t_restrictedNotice)
+        </div>
+        #endif
+
+        #if(isManualAccept):
+        <div class="notice notice-restricted">
+            #(t_manualAcceptNotice)
+        </div>
+        #endif
+
+        <section class="card">
+            <h2>#(t_howToSubscribe)</h2>
+
+            <h3>#(t_mastodonMisskey)</h3>
+            <p>#(t_mastodonMisskeyDesc)</p>
+            <code class="relay-url">#(inboxURL)</code>
+
+            <h3>#(t_pleromaAkkoma)</h3>
+            <p>#(t_pleromaAkkomaDesc)</p>
+            <code class="relay-url">#(actorURL)</code>
+
+            <h3>#(t_others)</h3>
+            <p>#(t_othersDesc)</p>
+        </section>
+
+        <section class="card">
+            <h2>#(t_connectedInstances) (#(subscriberCount))</h2>
+
+            #if(subscriberCount > 0):
+            <div class="instance-grid">
+                #for(subscriber in subscribers):
+                <div class="instance-item">
+                    <div class="instance-domain">#(subscriber.domain)</div>
+                    #if(subscriber.joinedAt):
+                    <div class="instance-joined">#(t_joined) #(subscriber.joinedAt)</div>
+                    #endif
+                </div>
+                #endfor
+            </div>
+            #else:
+            <p class="empty-state">#(t_noInstances)</p>
+            #endif
+        </section>
+    </main>
+
+    <footer>
+        #if(hasFooter):
+        <div class="custom-footer">#unsafeHTML(footer)</div>
+        #endif
+        <div class="version-info">
+            #if(sourceURL):
+            <a href="#(sourceURL)">AP Relay #(softwareVersion)#if(shortCommit): (#(shortCommit))#endif</a>
+            #else:
+            AP Relay #(softwareVersion)
+            #endif
+        </div>
+    </footer>
 </body>
 </html>

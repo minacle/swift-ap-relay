@@ -1,4 +1,5 @@
 import APRelayCore
+import Foundation
 import Vapor
 
 /// Creates a `RelayConfiguration` from Vapor environment variables.
@@ -10,7 +11,61 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         adminToken: Environment.get("ADMIN_TOKEN") ?? "",
         manualAccept: Environment.get("MANUAL_ACCEPT") == "true",
         restrictedMode: Environment.get("RESTRICTED_MODE") == "true",
-        relayDescription: Environment.get("RELAY_DESCRIPTION") ?? "",
-        relayFooter: Environment.get("RELAY_FOOTER") ?? ""
+        relayName: buildLocalizedString(envPrefix: "RELAY_NAME"),
+        relayDescription: buildLocalizedString(envPrefix: "RELAY_DESCRIPTION"),
+        relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER")
     )
+}
+
+// MARK: - Localized Env Var Helpers
+
+/// Scans `ProcessInfo.processInfo.environment` for keys matching
+/// `{envPrefix}` and `{envPrefix}__{LOCALE}`, building a `LocalizedString`.
+///
+/// - `RELAY_NAME` → `"und"` key
+/// - `RELAY_NAME__KO` → `"ko"` key
+/// - `RELAY_NAME__ZH_TW` → `"zh-TW"` key
+private func buildLocalizedString(envPrefix: String) -> LocalizedString {
+    let env = ProcessInfo.processInfo.environment
+    var values: [String: String] = [:]
+
+    // Base value (no suffix) → "und"
+    if let base = env[envPrefix], !base.isEmpty {
+        values["und"] = base
+    }
+
+    // Scan for locale-suffixed variants (double underscore separator)
+    let prefix = envPrefix + "__"
+    for (key, value) in env where key.hasPrefix(prefix) && !value.isEmpty {
+        let suffix = String(key.dropFirst(prefix.count))
+        let locale = parseEnvLocaleSuffix(suffix)
+        values[locale] = value
+    }
+
+    return LocalizedString(values)
+}
+
+/// Converts an env var locale suffix to a BCP 47 locale identifier.
+///
+/// - `KO` → `"ko"`
+/// - `ZH_TW` → `"zh-TW"`
+/// - `ZH_HANT_TW` → `"zh-Hant-TW"`
+/// - `SR_LATN` → `"sr-Latn"`
+private func parseEnvLocaleSuffix(_ suffix: String) -> String {
+    let parts = suffix.split(separator: "_")
+    guard let first = parts.first else { return suffix.lowercased() }
+    let language = first.lowercased()
+    if parts.count > 1 {
+        let subtags = parts.dropFirst().map { subtag -> String in
+            if subtag.count == 4 && subtag.allSatisfy(\.isLetter) {
+                // Script subtag: Title Case (e.g., Hant, Latn)
+                return subtag.prefix(1).uppercased() + subtag.dropFirst().lowercased()
+            } else {
+                // Region subtag (2 letters / 3 digits) or variant
+                return subtag.uppercased()
+            }
+        }.joined(separator: "-")
+        return "\(language)-\(subtags)"
+    }
+    return language
 }
