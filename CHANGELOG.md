@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
+
 ## [0.0.1] - 2026-04-12
 
 ### Added
