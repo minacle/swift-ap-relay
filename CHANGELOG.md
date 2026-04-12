@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Standardize naming: display name to `APRelay` (PascalCase, matching Swift package/User-Agent), NodeInfo software name and Docker image tag to `ap-relay` (hyphenated, matching repository/registry naming)
 - `RelayConfiguration.relayDescription` and `relayFooter` changed from `String` to `LocalizedString`
 - Homepage subscribers list is now sorted alphabetically by domain
 - NodeInfo version field now uses auto-detected version instead of hardcoded `0.1.0`

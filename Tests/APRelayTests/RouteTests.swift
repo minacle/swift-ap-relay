@@ -10,7 +10,7 @@ struct RouteTests {
             try await app.testing().test(.GET, "/") { res async in
                 #expect(res.status == .ok)
                 #expect(res.headers.contentType?.type == "text")
-                #expect(res.body.string.contains("AP Relay"))
+                #expect(res.body.string.contains("APRelay"))
             }
         }
     }
@@ -69,7 +69,7 @@ struct RouteTests {
         try await withApp(configure: testConfigure) { app in
             try await app.testing().test(.GET, "nodeinfo/2.1") { res async in
                 #expect(res.status == .ok)
-                #expect(res.body.string.contains("aprelay"))
+                #expect(res.body.string.contains("ap-relay"))
                 #expect(res.body.string.contains("activitypub"))
             }
         }

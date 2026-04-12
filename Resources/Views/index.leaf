@@ -339,9 +339,9 @@
         #endif
         <div class="version-info">
             #if(sourceURL):
-            <a href="#(sourceURL)">AP Relay #(softwareVersion)#if(shortCommit): (#(shortCommit))#endif</a>
+            <a href="#(sourceURL)">APRelay #(softwareVersion)#if(shortCommit): (#(shortCommit))#endif</a>
             #else:
-            AP Relay #(softwareVersion)
+            APRelay #(softwareVersion)
             #endif
         </div>
     </footer>

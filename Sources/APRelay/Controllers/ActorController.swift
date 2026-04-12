@@ -17,7 +17,7 @@ struct ActorController: RouteCollection {
             id: config.actorURL,
             type: "Application",
             preferredUsername: "relay",
-            name: "AP Relay",
+            name: "APRelay",
             summary: "ActivityPub Relay Server",
             inbox: config.inboxURL,
             url: config.actorURL,

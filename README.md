@@ -62,13 +62,13 @@ This starts the relay server and a Valkey (Redis-compatible) instance. The relay
 ### Using Docker directly
 
 ```bash
-docker build -t aprelay \
+docker build -t ap-relay \
   --build-arg SOURCE_COMMIT=$(git rev-parse HEAD) .
 docker run -p 8080:8080 \
   -e RELAY_URL=https://relay.example.com \
   -e REDIS_URL=redis://your-redis:6379 \
   -e ADMIN_TOKEN=your-secret-token \
-  aprelay
+  ap-relay
 ```
 
 ### Container registry

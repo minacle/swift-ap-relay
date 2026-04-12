@@ -28,7 +28,7 @@ struct NodeInfoController: RouteCollection {
         return NodeInfoResponse(
             version: "2.1",
             software: NodeInfoSoftware(
-                name: "aprelay",
+                name: "ap-relay",
                 version: AppInfo.version,
                 repository: "https://github.com/sinoru/swift-ap-relay"
             ),
