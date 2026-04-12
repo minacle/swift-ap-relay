@@ -45,38 +45,21 @@ func configure(_ app: Application) async throws {
             .every(seconds: config.instanceInfoCheckInterval)
     }
 
-    // Server-only setup: signing key and in-process queue workers require
-    // a live Redis connection at boot, so only register them for `serve`.
+    // Server-only setup: signing key, metrics server, and subscriber info
+    // fetch all require a live Redis connection at boot, so register a
+    // unified lifecycle handler that runs after Redis pools are ready.
+    // Must be registered after `app.redis.configuration` so that Redis's
+    // lifecycle handler (which creates connection pools) runs first.
     let args = app.environment.commandInput.arguments
     let isHelp = args.contains("--help") || args.contains("-h")
     let commandName = args.first ?? "serve"
     if commandName == "serve" && !isHelp {
-        // Initialize signing key after Redis pools are ready.
-        // Must be registered after `app.redis.configuration` so that
-        // Redis's lifecycle handler (which creates connection pools) runs first.
-        app.lifecycle.use(SigningKeyBootstrap())
-
-        // Start a dedicated metrics server when METRICS_BIND is set.
-        if let metricsBind = Environment.get("METRICS_BIND"),
-           let registry = app.prometheusRegistry {
-            let (hostname, port) = parseBindAddress(metricsBind)
-            app.lifecycle.use(MetricsServerLifecycle(registry: registry, hostname: hostname, port: port))
-        }
+        app.lifecycle.use(AppBootstrap())
 
         // Start queue workers and scheduled jobs in non-testing environments.
         if app.environment != .testing {
             try app.queues.startInProcessJobs()
             try app.queues.startScheduledJobs()
-
-            // Immediately fetch instance info for existing subscribers at boot.
-            let subscribers = try await app.repository.getAllSubscribers(state: .accepted)
-            for subscriber in subscribers {
-                try await app.queues.queue.dispatch(
-                    InstanceInfoFetchJob.self,
-                    InstanceInfoFetchPayload(domain: subscriber.domain),
-                    maxRetryCount: 0
-                )
-            }
         }
     }
 
@@ -97,10 +80,14 @@ func configure(_ app: Application) async throws {
     try routes(app)
 }
 
-// MARK: - Signing Key Lifecycle Bootstrap
+// MARK: - App Lifecycle Bootstrap
 
-private struct SigningKeyBootstrap: LifecycleHandler {
+/// Unified lifecycle handler that runs after Redis connection pools are ready.
+/// Handles signing key initialization, metrics server startup, and subscriber
+/// instance info fetching.
+private struct AppBootstrap: LifecycleHandler {
     func didBootAsync(_ application: Application) async throws {
+        // 1. Initialize signing key.
         let keyManager = KeyManager(repository: application.repository)
         let privateKey = try await keyManager.getOrCreatePrivateKey()
         application.signingKey = privateKey
@@ -111,6 +98,44 @@ private struct SigningKeyBootstrap: LifecycleHandler {
             keyID: keyID,
             userAgent: AppInfo.userAgent(config: application.relayConfig)
         )
+
+        // 2. Start a dedicated metrics server when METRICS_BIND is set.
+        if let metricsBind = Environment.get("METRICS_BIND"),
+           let registry = application.prometheusRegistry {
+            let (hostname, port) = parseBindAddress(metricsBind)
+
+            let metricsApp = try await Application.make(application.environment)
+            metricsApp.http.server.configuration.hostname = hostname
+            metricsApp.http.server.configuration.port = port
+
+            metricsApp.get("metrics") { _ in
+                registry.emitToString()
+            }
+
+            try await metricsApp.server.start(address: nil)
+            application.storage[MetricsAppKey.self] = metricsApp
+
+            application.logger.info("Metrics server started on \(hostname):\(port)")
+        }
+
+        // 3. Fetch instance info for existing subscribers at boot.
+        if application.environment != .testing {
+            let subscribers = try await application.repository.getAllSubscribers(state: .accepted)
+            for subscriber in subscribers {
+                try await application.queues.queue.dispatch(
+                    InstanceInfoFetchJob.self,
+                    InstanceInfoFetchPayload(domain: subscriber.domain),
+                    maxRetryCount: 0
+                )
+            }
+        }
+    }
+
+    func shutdownAsync(_ application: Application) async throws {
+        guard let metricsApp = application.storage[MetricsAppKey.self] else { return }
+        await metricsApp.server.shutdown()
+        try await metricsApp.asyncShutdown()
+        application.storage[MetricsAppKey.self] = nil
     }
 }
 
@@ -181,31 +206,3 @@ private struct MetricsAppKey: StorageKey {
     typealias Value = Application
 }
 
-private struct MetricsServerLifecycle: LifecycleHandler {
-    let registry: PrometheusCollectorRegistry
-    let hostname: String
-    let port: Int
-
-    func didBootAsync(_ application: Application) async throws {
-        let metricsApp = try await Application.make(application.environment)
-        metricsApp.http.server.configuration.hostname = hostname
-        metricsApp.http.server.configuration.port = port
-
-        let registry = self.registry
-        metricsApp.get("metrics") { _ in
-            registry.emitToString()
-        }
-
-        try await metricsApp.server.start(address: nil)
-        application.storage[MetricsAppKey.self] = metricsApp
-
-        application.logger.info("Metrics server started on \(hostname):\(port)")
-    }
-
-    func shutdownAsync(_ application: Application) async throws {
-        guard let metricsApp = application.storage[MetricsAppKey.self] else { return }
-        await metricsApp.server.shutdown()
-        try await metricsApp.asyncShutdown()
-        application.storage[MetricsAppKey.self] = nil
-    }
-}
