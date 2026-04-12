@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
 
+### Fixed
+
+- Homepage now shows subscriber instance details immediately after server boot instead of waiting for the first scheduled check
+
 ### Security
 
 - Validate outbound URLs in NodeInfo fetch to prevent SSRF via crafted `link.href` (scheme, reserved hostname, and private IP literal checks)

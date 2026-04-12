@@ -60,6 +60,16 @@ func configure(_ app: Application) async throws {
         if app.environment != .testing {
             try app.queues.startInProcessJobs()
             try app.queues.startScheduledJobs()
+
+            // Immediately fetch NodeInfo for existing subscribers at boot.
+            let subscribers = try await app.repository.getAllSubscribers(state: .accepted)
+            for subscriber in subscribers {
+                try await app.queues.queue.dispatch(
+                    NodeInfoFetchJob.self,
+                    NodeInfoFetchPayload(domain: subscriber.domain),
+                    maxRetryCount: 0
+                )
+            }
         }
     }
 
