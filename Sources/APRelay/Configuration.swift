@@ -14,8 +14,20 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         nodeInfoCheckInterval: max(Environment.get("NODEINFO_CHECK_INTERVAL").flatMap(Int.init) ?? 300, 60),
         relayName: buildLocalizedString(envPrefix: "RELAY_NAME"),
         relayDescription: buildLocalizedString(envPrefix: "RELAY_DESCRIPTION"),
-        relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER")
+        relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER"),
+        allowedPrivateAddresses: parseCommaSeparatedEnv("ALLOWED_PRIVATE_ADDRESSES")
     )
+}
+
+// MARK: - Comma-Separated Env Var Helper
+
+/// Parses a comma-separated environment variable into a trimmed array of strings.
+///
+/// - `"192.168.1.0/24, 10.0.0.0/8"` → `["192.168.1.0/24", "10.0.0.0/8"]`
+/// - `nil` or `""` → `[]`
+private func parseCommaSeparatedEnv(_ key: String) -> [String] {
+    guard let value = Environment.get(key), !value.isEmpty else { return [] }
+    return value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
 }
 
 // MARK: - Localized Env Var Helpers
