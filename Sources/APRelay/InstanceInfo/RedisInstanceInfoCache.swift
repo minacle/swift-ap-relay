@@ -1,12 +1,11 @@
-import APRelayCore
 import Foundation
 @preconcurrency @unsafe import RediStack
 import Vapor
 
-/// Redis-backed implementation of ``NodeInfoCaching``.
+/// Redis-backed implementation of ``InstanceInfoCaching``.
 ///
-/// Stores each domain's NodeInfo as a JSON string under `nodeinfo:{domain}`.
-struct RedisNodeInfoCache: NodeInfoCaching, Sendable {
+/// Stores each domain's instance info as a JSON string under `instanceinfo:{domain}`.
+struct RedisInstanceInfoCache: InstanceInfoCaching, Sendable {
     let redis: any RedisClient & Sendable
     let ttlSeconds: Int
 
@@ -22,30 +21,30 @@ struct RedisNodeInfoCache: NodeInfoCaching, Sendable {
         return decoder
     }()
 
-    private func key(_ domain: String) -> RedisKey { "nodeinfo:\(domain)" }
+    private func key(_ domain: String) -> RedisKey { "instanceinfo:\(domain)" }
 
-    func getNodeInfo(domain: String) async throws -> RemoteNodeInfo? {
+    func getInstanceInfo(domain: String) async throws -> InstanceInfo? {
         let data = try await redis.get(key(domain), as: String.self).get()
         guard let json = data, let jsonData = json.data(using: .utf8) else { return nil }
-        return try Self.decoder.decode(RemoteNodeInfo.self, from: jsonData)
+        return try Self.decoder.decode(InstanceInfo.self, from: jsonData)
     }
 
-    func setNodeInfo(domain: String, info: RemoteNodeInfo) async throws {
+    func setInstanceInfo(domain: String, info: InstanceInfo) async throws {
         let data = try Self.encoder.encode(info)
         guard let json = String(data: data, encoding: .utf8) else { return }
         try await redis.setex(key(domain), to: json, expirationInSeconds: ttlSeconds).get()
     }
 
-    func getAllNodeInfo(domains: [String]) async throws -> [String: RemoteNodeInfo] {
+    func getAllInstanceInfo(domains: [String]) async throws -> [String: InstanceInfo] {
         guard !domains.isEmpty else { return [:] }
 
         let keys = domains.map { key($0) }
         let values = try await redis.mget(keys, as: String.self).get()
 
-        var result: [String: RemoteNodeInfo] = [:]
+        var result: [String: InstanceInfo] = [:]
         for (domain, value) in zip(domains, values) {
             guard let json = value, let jsonData = json.data(using: .utf8) else { continue }
-            if let info = try? Self.decoder.decode(RemoteNodeInfo.self, from: jsonData) {
+            if let info = try? Self.decoder.decode(InstanceInfo.self, from: jsonData) {
                 result[domain] = info
             }
         }

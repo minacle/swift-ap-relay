@@ -1,19 +1,21 @@
 import Foundation
 
-/// Cached NodeInfo data fetched from a remote server.
-package struct RemoteNodeInfo: Codable, Sendable {
-    package let softwareName: String?
-    package let softwareVersion: String?
-    package let openRegistrations: Bool?
-    package let staffAccounts: [String]?
-    package let isReachable: Bool
-    package let lastCheckedAt: Date
+/// Cached instance metadata fetched from a remote server.
+struct InstanceInfo: Codable, Sendable {
+    let softwareName: String?
+    let softwareVersion: String?
+    let openRegistrations: Bool?
+    let staffAccounts: [String]?
+    let faviconURL: String?
+    let isReachable: Bool
+    let lastCheckedAt: Date
 
-    package init(
+    init(
         softwareName: String? = nil,
         softwareVersion: String? = nil,
         openRegistrations: Bool? = nil,
         staffAccounts: [String]? = nil,
+        faviconURL: String? = nil,
         isReachable: Bool,
         lastCheckedAt: Date
     ) {
@@ -21,6 +23,7 @@ package struct RemoteNodeInfo: Codable, Sendable {
         self.softwareVersion = softwareVersion
         self.openRegistrations = openRegistrations
         self.staffAccounts = staffAccounts
+        self.faviconURL = faviconURL
         self.isReachable = isReachable
         self.lastCheckedAt = lastCheckedAt
     }

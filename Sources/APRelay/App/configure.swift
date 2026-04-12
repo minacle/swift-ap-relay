@@ -38,11 +38,11 @@ func configure(_ app: Application) async throws {
         app.queues.add(DeliveryJob())
         app.queues.add(AcceptJob())
         app.queues.add(RejectJob())
-        app.queues.add(NodeInfoFetchJob())
+        app.queues.add(InstanceInfoFetchJob())
 
-        // Schedule periodic NodeInfo check.
-        app.queues.schedule(NodeInfoCheckJob())
-            .every(seconds: config.nodeInfoCheckInterval)
+        // Schedule periodic instance info check.
+        app.queues.schedule(InstanceInfoCheckJob())
+            .every(seconds: config.instanceInfoCheckInterval)
     }
 
     // Server-only setup: signing key and in-process queue workers require
@@ -61,12 +61,12 @@ func configure(_ app: Application) async throws {
             try app.queues.startInProcessJobs()
             try app.queues.startScheduledJobs()
 
-            // Immediately fetch NodeInfo for existing subscribers at boot.
+            // Immediately fetch instance info for existing subscribers at boot.
             let subscribers = try await app.repository.getAllSubscribers(state: .accepted)
             for subscriber in subscribers {
                 try await app.queues.queue.dispatch(
-                    NodeInfoFetchJob.self,
-                    NodeInfoFetchPayload(domain: subscriber.domain),
+                    InstanceInfoFetchJob.self,
+                    InstanceInfoFetchPayload(domain: subscriber.domain),
                     maxRetryCount: 0
                 )
             }

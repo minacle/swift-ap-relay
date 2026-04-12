@@ -19,9 +19,9 @@ struct IndexController: RouteCollection {
 
         let sortedSubscribers = subscribers.sorted { $0.domain < $1.domain }
 
-        // Fetch cached NodeInfo for all subscriber domains.
+        // Fetch cached instance info for all subscriber domains.
         let domains = sortedSubscribers.map(\.domain)
-        let nodeInfoMap = try await req.nodeInfoCache.getAllNodeInfo(domains: domains)
+        let instanceInfoMap = try await req.instanceInfoCache.getAllInstanceInfo(domains: domains)
 
         // Resolve locale-specific name, description, and footer
         let preferredLocales = req.preferredLocales
@@ -39,9 +39,10 @@ struct IndexController: RouteCollection {
             footer: footer,
             hasFooter: !footer.isEmpty,
             subscribers: sortedSubscribers.map { subscriber in
-                let info = nodeInfoMap[subscriber.domain]
+                let info = instanceInfoMap[subscriber.domain]
                 return SubscriberItem(
                     domain: subscriber.domain,
+                    faviconURL: info?.faviconURL ?? "https://\(subscriber.domain)/favicon.ico",
                     joinedAt: subscriber.createdAt.map { dateFormatter.string(from: $0) },
                     softwareName: info?.softwareName,
                     softwareVersion: info?.softwareVersion,
@@ -124,6 +125,7 @@ private struct IndexContext: Encodable {
 
 private struct SubscriberItem: Encodable {
     let domain: String
+    let faviconURL: String
     let joinedAt: String?
     let softwareName: String?
     let softwareVersion: String?

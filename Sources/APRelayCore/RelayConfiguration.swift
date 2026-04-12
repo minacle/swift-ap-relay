@@ -11,7 +11,7 @@ package struct RelayConfiguration: Sendable {
     package let adminToken: String
     package let manualAccept: Bool
     package let restrictedMode: Bool
-    package let nodeInfoCheckInterval: Int
+    package let instanceInfoCheckInterval: Int
     package let relayName: LocalizedString
     package let relayDescription: LocalizedString
     package let relayFooter: LocalizedString
@@ -31,7 +31,7 @@ package struct RelayConfiguration: Sendable {
         adminToken: String = "",
         manualAccept: Bool = false,
         restrictedMode: Bool = false,
-        nodeInfoCheckInterval: Int = 300,
+        instanceInfoCheckInterval: Int = 300,
         relayName: LocalizedString = LocalizedString([:]),
         relayDescription: LocalizedString = LocalizedString([:]),
         relayFooter: LocalizedString = LocalizedString([:]),
@@ -47,7 +47,7 @@ package struct RelayConfiguration: Sendable {
         self.adminToken = adminToken
         self.manualAccept = manualAccept
         self.restrictedMode = restrictedMode
-        self.nodeInfoCheckInterval = nodeInfoCheckInterval
+        self.instanceInfoCheckInterval = instanceInfoCheckInterval
         self.relayName = relayName
         self.relayDescription = relayDescription
         self.relayFooter = relayFooter

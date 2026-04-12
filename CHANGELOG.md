@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Periodic NodeInfo fetching for subscriber instances with software name/version, registration status, staff accounts, and reachability displayed on the homepage
-- `NODEINFO_CHECK_INTERVAL` environment variable to configure NodeInfo check frequency (default: 300 seconds, minimum: 60)
+- Periodic instance info fetching for subscriber instances with software name/version, registration status, staff accounts, reachability, and favicon displayed on the homepage
+- `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 300 seconds, minimum: 60)
 - `ALLOWED_PRIVATE_ADDRESSES` environment variable to whitelist private IP CIDR ranges for internal/test cluster deployments
 
 ### Changed
@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Validate outbound URLs in NodeInfo fetch to prevent SSRF via crafted `link.href` (scheme, reserved hostname, and private IP literal checks)
+- Validate outbound URLs in instance info fetch to prevent SSRF via crafted `link.href` (scheme, reserved hostname, and private IP literal checks)
 
 ## [0.0.1] - 2026-04-12
 

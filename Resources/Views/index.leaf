@@ -65,7 +65,7 @@
                 <div class="instance-item">
                     <div class="instance-header">
                         <img class="instance-favicon"
-                             src="https://#(subscriber.domain)/favicon.ico"
+                             src="#(subscriber.faviconURL)"
                              alt="" width="16" height="16" loading="lazy"
                              onerror="this.style.display='none'">
                         <a class="instance-domain" href="https://#(subscriber.domain)" target="_blank" rel="noopener">#(subscriber.domain)</a>

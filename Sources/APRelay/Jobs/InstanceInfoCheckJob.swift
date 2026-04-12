@@ -1,12 +1,11 @@
-import APRelayCore
 import Queues
 import Vapor
 
-/// Periodically dispatches ``NodeInfoFetchJob`` for each accepted subscriber.
+/// Periodically dispatches ``InstanceInfoFetchJob`` for each accepted subscriber.
 ///
 /// The actual HTTP fetching happens in individual queue jobs, so worker count
 /// naturally limits concurrent outbound requests.
-struct NodeInfoCheckJob: AsyncScheduledJob {
+struct InstanceInfoCheckJob: AsyncScheduledJob {
     func run(context: QueueContext) async throws {
         let app = context.application
         let subscribers = try await app.repository.getAllSubscribers(state: .accepted)
@@ -14,8 +13,8 @@ struct NodeInfoCheckJob: AsyncScheduledJob {
 
         for subscriber in subscribers {
             try await app.queues.queue.dispatch(
-                NodeInfoFetchJob.self,
-                NodeInfoFetchPayload(domain: subscriber.domain),
+                InstanceInfoFetchJob.self,
+                InstanceInfoFetchPayload(domain: subscriber.domain),
                 maxRetryCount: 0
             )
         }
