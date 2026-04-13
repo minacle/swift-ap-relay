@@ -30,13 +30,13 @@ struct NodeInfoSoftware: Codable, Sendable {
 
 struct NodeInfoUsage: Codable, Sendable {
     let users: NodeInfoUsers
-    let localPosts: Int
+    let localPosts: Int?
 }
 
 struct NodeInfoUsers: Codable, Sendable {
-    let total: Int
-    let activeMonth: Int
-    let activeHalfyear: Int
+    let total: Int?
+    let activeMonth: Int?
+    let activeHalfyear: Int?
 }
 
 struct NodeInfoMetadata: Codable, Sendable {
