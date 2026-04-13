@@ -257,6 +257,24 @@ struct InboxController: RouteCollection {
 
         // Create/Announce are wrapped in a relay-attributed Announce;
         // all other types are forwarded as-is.
+        //
+        // Why Announce wrapping instead of forwarding the original body:
+        //   The relay signs HTTP requests with its own key, so the HTTP signature
+        //   actor (relay) differs from the activity's actor (original author).
+        //   - Mastodon/Misskey: accept the mismatch when an LD-Signature is present
+        //     in the body, but not all origin servers attach one.
+        //   - Akkoma: strictly rejects any HTTP-sig/actor mismatch (no LD-Sig
+        //     fallback), returning 400 Bad Request.
+        //   - Pleroma: falls back to fetching the object from the origin server
+        //     for Create activities, but rejects other types.
+        //   Wrapping in Announce keeps relay actor == HTTP-sig actor, which every
+        //   implementation accepts. Receiving servers then fetch the original note
+        //   via the Announce's object URI.
+        //
+        // Known limitation:
+        //   Misskey displays relay Announces as "renotes" from the relay account
+        //   because it lacks relay-specific Announce handling.
+        //   See: https://github.com/misskey-dev/misskey/issues/11056
         let payload: Data
         switch activity.type {
         case "Create", "Announce":
