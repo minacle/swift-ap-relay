@@ -15,7 +15,9 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         relayName: buildLocalizedString(envPrefix: "RELAY_NAME"),
         relayDescription: buildLocalizedString(envPrefix: "RELAY_DESCRIPTION"),
         relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER"),
-        allowedPrivateAddresses: parseCommaSeparatedEnv("ALLOWED_PRIVATE_ADDRESSES")
+        allowedPrivateAddresses: parseCommaSeparatedEnv("ALLOWED_PRIVATE_ADDRESSES"),
+        defaultQueueWorkerCount: Environment.get("DEFAULT_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil },
+        deliveryQueueWorkerCount: Environment.get("DELIVERY_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil }
     )
 }
 

@@ -117,6 +117,9 @@ docker pull ghcr.io/sinoru/swift-ap-relay:latest
 | `AP_RELAY_VERSION` | Override the version string (auto-detected from git if unset) | (auto-detected) |
 | `SOURCE_COMMIT` | Source commit hash for version display (auto-detected from git if unset) | (auto-detected) |
 | `METRICS_BIND` | Bind address for the Prometheus metrics server (e.g. `0.0.0.0:9090`). Disabled when unset. | (disabled) |
+| `INSTANCE_INFO_CHECK_INTERVAL` | Interval in seconds between periodic instance info checks | `300` (minimum `60`) |
+| `DEFAULT_QUEUE_WORKER_COUNT` | Number of workers for the default job queue | EventLoop count |
+| `DELIVERY_QUEUE_WORKER_COUNT` | Number of workers for the delivery job queue | EventLoop count |
 | `LOG_LEVEL` | Logging level (`trace`, `debug`, `info`, `notice`, `warning`, `error`, `critical`) | `notice` (production) / `info` (development) |
 
 ### Localized Environment Variables

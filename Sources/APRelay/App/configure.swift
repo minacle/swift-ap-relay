@@ -60,7 +60,18 @@ func configure(_ app: Application) async throws {
 
         // Start queue workers and scheduled jobs in non-testing environments.
         if app.environment != .testing {
-            try app.queues.startInProcessJobs()
+            let defaultQueue = QueueName(
+                string: QueueName.default.string,
+                workerCount: config.defaultQueueWorkerCount
+            )
+            try app.queues.startInProcessJobs(on: defaultQueue)
+
+            let deliveryQueue = QueueName(
+                string: QueueName.delivery.string,
+                workerCount: config.deliveryQueueWorkerCount
+            )
+            try app.queues.startInProcessJobs(on: deliveryQueue)
+
             try app.queues.startScheduledJobs()
         }
     }

@@ -282,7 +282,7 @@ struct InboxController: RouteCollection {
 
         let targetInboxes = inboxURLs.filter { $0 != subscriber.inboxURL }
         for inbox in targetInboxes {
-            try await req.queue.dispatch(
+            try await req.queues(.delivery).dispatch(
                 DeliveryJob.self,
                 DeliveryPayload(activity: payload, inboxURL: inbox),
                 maxRetryCount: 5
