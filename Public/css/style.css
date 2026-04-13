@@ -212,6 +212,7 @@ header h1 {
     color: var(--text);
     overflow-x: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 a.instance-domain:hover {
