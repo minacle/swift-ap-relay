@@ -325,6 +325,201 @@ struct InboxTests {
         }
     }
 
+    // MARK: - LitePub Mutual Follow
+
+    @Test("Follow with relay actor URL dispatches follow back (LitePub)")
+    func followPleromaStyleSendsFollowBack() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let config = app.relayConfig
+            let activity = TestSigning.makeFollowActivity(objectURI: config.actorURL)
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 1)
+            #expect(subscribers.first?.state == .accepted)
+            #expect(subscribers.first?.followObjectURI == config.actorURL)
+            #expect(subscribers.first?.outboundFollowActivityID != nil)
+        }
+    }
+
+    @Test("Accept from LitePub instance is acknowledged")
+    func acceptFromLitePubInstance() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let config = app.relayConfig
+            let outboundFollowID = "http://localhost/activities/outbound-follow-1"
+
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .accepted,
+                followActivityID: "https://remote.example/activities/follow-1",
+                followObjectURI: config.actorURL,
+                outboundFollowActivityID: outboundFollowID,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeAcceptActivity(
+                followActivityID: outboundFollowID,
+                relayActorURL: config.actorURL
+            )
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            // Subscriber should still exist and be accepted.
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
+            #expect(subscriber != nil)
+            #expect(subscriber?.state == .accepted)
+        }
+    }
+
+    @Test("Accept without outbound Follow is ignored")
+    func acceptWithoutOutboundFollowIgnored() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let config = app.relayConfig
+
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .accepted,
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeAcceptActivity(
+                followActivityID: "http://localhost/activities/unknown",
+                relayActorURL: config.actorURL
+            )
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            // Subscriber should still exist unchanged.
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
+            #expect(subscriber != nil)
+        }
+    }
+
+    @Test("Reject from LitePub instance removes subscriber")
+    func rejectFromLitePubInstanceRemovesSubscriber() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let config = app.relayConfig
+            let outboundFollowID = "http://localhost/activities/outbound-follow-1"
+
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .accepted,
+                followActivityID: "https://remote.example/activities/follow-1",
+                followObjectURI: config.actorURL,
+                outboundFollowActivityID: outboundFollowID,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeRejectActivity(
+                followActivityID: outboundFollowID,
+                relayActorURL: config.actorURL
+            )
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            // Subscriber should be removed.
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
+        }
+    }
+
+    @Test("Reject without outbound Follow is ignored")
+    func rejectWithoutOutboundFollowIgnored() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let config = app.relayConfig
+
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .accepted,
+                followActivityID: "https://remote.example/activities/follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeRejectActivity(
+                followActivityID: "http://localhost/activities/unknown",
+                relayActorURL: config.actorURL
+            )
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            // Subscriber should still exist.
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
+            #expect(subscriber != nil)
+        }
+    }
+
+    @Test("Undo Follow from LitePub subscriber removes subscriber")
+    func undoFollowFromLitePubRemovesSubscriber() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .accepted,
+                followActivityID: "https://remote.example/activities/follow-1",
+                outboundFollowActivityID: "http://localhost/activities/outbound-follow-1",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeUndoActivity()
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            let subscribers = try await app.repository.getAllSubscribers(state: nil)
+            #expect(subscribers.count == 0)
+        }
+    }
+
     // MARK: - Duplicate Detection
 
     @Test("Duplicate activity ID returns 202")

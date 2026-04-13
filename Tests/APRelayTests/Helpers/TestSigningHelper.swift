@@ -196,6 +196,62 @@ enum TestSigning {
         )
     }
 
+    /// Creates an Accept activity wrapping the relay's outbound Follow.
+    static func makeAcceptActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID,
+        followActivityID: String,
+        relayActorURL: String
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Accept",
+            actor: actor,
+            object: .activity(APActivity(
+                context: nil,
+                id: followActivityID,
+                type: "Follow",
+                actor: relayActorURL,
+                object: .uri(actor),
+                to: nil,
+                cc: nil,
+                published: nil
+            )),
+            to: .single(relayActorURL),
+            cc: nil,
+            published: nil
+        )
+    }
+
+    /// Creates a Reject activity wrapping the relay's outbound Follow.
+    static func makeRejectActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID,
+        followActivityID: String,
+        relayActorURL: String
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Reject",
+            actor: actor,
+            object: .activity(APActivity(
+                context: nil,
+                id: followActivityID,
+                type: "Follow",
+                actor: relayActorURL,
+                object: .uri(actor),
+                to: nil,
+                cc: nil,
+                published: nil
+            )),
+            to: .single(relayActorURL),
+            cc: nil,
+            published: nil
+        )
+    }
+
     /// Encodes an activity and returns the signed (headers, body) pair.
     static func signedRequest(
         activity: APActivity,

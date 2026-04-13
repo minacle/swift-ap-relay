@@ -30,7 +30,17 @@ struct AdminAPIController: RouteCollection {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
 
+        guard subscriber.state != .accepted else {
+            return AdminResponse(status: "accepted", domain: domain)
+        }
+
         subscriber.state = .accepted
+
+        // LitePub: if following relay actor directly, prepare outbound follow before saving.
+        if subscriber.followObjectURI == req.relayConfig.actorURL {
+            subscriber.outboundFollowActivityID = "\(req.relayConfig.baseURL)/activities/\(UUID().uuidString)"
+        }
+
         try await req.repository.saveSubscriber(subscriber)
 
         try await req.queue.dispatch(
@@ -43,6 +53,22 @@ struct AdminAPIController: RouteCollection {
             ),
             maxRetryCount: 5
         )
+
+        // LitePub: if instance followed the relay actor directly, follow back.
+        if subscriber.followObjectURI == req.relayConfig.actorURL,
+           let outboundFollowID = subscriber.outboundFollowActivityID
+        {
+            try await req.queue.dispatch(
+                FollowJob.self,
+                FollowPayload(
+                    inboxURL: subscriber.inboxURL,
+                    targetActorID: subscriber.actorID,
+                    followActivityID: outboundFollowID
+                ),
+                maxRetryCount: 5
+            )
+        }
+
         try await req.queue.dispatch(
             InstanceInfoFetchJob.self,
             InstanceInfoFetchPayload(domain: domain),
@@ -60,8 +86,11 @@ struct AdminAPIController: RouteCollection {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
 
+        guard subscriber.state != .rejected else {
+            return AdminResponse(status: "rejected", domain: domain)
+        }
+
         subscriber.state = .rejected
-        try await req.repository.saveSubscriber(subscriber)
 
         try await req.queue.dispatch(
             RejectJob.self,
@@ -74,6 +103,12 @@ struct AdminAPIController: RouteCollection {
             maxRetryCount: 5
         )
 
+        // LitePub: if we had an outbound Follow, send Undo Follow.
+        try await subscriber.dispatchUndoFollowIfNeeded(on: req.queue)
+        subscriber.outboundFollowActivityID = nil
+
+        try await req.repository.saveSubscriber(subscriber)
+
         return AdminResponse(status: "rejected", domain: domain)
     }
 
@@ -81,9 +116,12 @@ struct AdminAPIController: RouteCollection {
     private func removeSubscriber(req: Request) async throws -> AdminResponse {
         let domain = req.parameters.get("domain")!
 
-        guard try await req.repository.getSubscriber(domain: domain) != nil else {
+        guard let subscriber = try await req.repository.getSubscriber(domain: domain) else {
             throw Abort(.notFound, reason: "Subscriber not found")
         }
+
+        // LitePub: if we had an outbound Follow, send Undo Follow.
+        try await subscriber.dispatchUndoFollowIfNeeded(on: req.queue)
 
         try await req.repository.deleteSubscriber(domain: domain)
         return AdminResponse(status: "removed", domain: domain)
@@ -106,7 +144,9 @@ struct AdminAPIController: RouteCollection {
         }
 
         // Also remove subscriber if exists.
-        if try await req.repository.getSubscriber(domain: body.domain) != nil {
+        if let subscriber = try await req.repository.getSubscriber(domain: body.domain) {
+            // LitePub: if we had an outbound Follow, send Undo Follow.
+            try await subscriber.dispatchUndoFollowIfNeeded(on: req.queue)
             try await req.repository.deleteSubscriber(domain: body.domain)
         }
 

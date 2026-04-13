@@ -38,6 +38,8 @@ func configure(_ app: Application) async throws {
         app.queues.add(DeliveryJob())
         app.queues.add(AcceptJob())
         app.queues.add(RejectJob())
+        app.queues.add(FollowJob())
+        app.queues.add(UndoFollowJob())
         app.queues.add(InstanceInfoFetchJob())
 
         // Schedule periodic instance info check.

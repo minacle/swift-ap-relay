@@ -80,6 +80,10 @@ struct InboxController: RouteCollection {
                 )
             case "Undo":
                 try await handleUndo(activity: activity, body: Data(buffer: body), req: req)
+            case "Accept":
+                try await handleAccept(activity: activity, req: req)
+            case "Reject":
+                try await handleReject(activity: activity, req: req)
             case "Create", "Announce", "Delete", "Update", "Move", "Add", "Remove":
                 try await handleActivity(activity: activity, body: Data(buffer: body), req: req)
             default:
@@ -113,34 +117,59 @@ struct InboxController: RouteCollection {
             ?? verifiedActor.inbox
             ?? guessInboxURL(from: activity.actor)
 
-        let state: SubscriberState = config.manualAccept ? .pending : .accepted
+        let initialState: SubscriberState = config.manualAccept ? .pending : .accepted
+        var effectiveState = initialState
+        var currentSubscriber: Subscriber?
 
         if var existing = try await repository.getSubscriber(domain: actorDomain) {
+            // If switching from LitePub (relay actor) to Mastodon (public), clean up outbound follow.
+            if existing.followObjectURI == config.actorURL && objectURI != config.actorURL {
+                try await existing.dispatchUndoFollowIfNeeded(on: req.queue)
+                existing.outboundFollowActivityID = nil
+            }
+
             existing.actorID = activity.actor
             existing.inboxURL = inboxURL
             existing.followActivityID = activity.id
             existing.followObjectURI = objectURI
             if existing.state == .rejected {
-                existing.state = state
+                existing.state = initialState
             }
+            effectiveState = existing.state
+
+            // LitePub: if following relay actor directly and accepted, prepare outbound follow.
+            if objectURI == config.actorURL && effectiveState == .accepted
+                && existing.outboundFollowActivityID == nil
+            {
+                existing.outboundFollowActivityID = "\(config.baseURL)/activities/\(UUID().uuidString)"
+            }
+
             try await repository.saveSubscriber(existing)
+            currentSubscriber = existing
         } else {
-            let subscriber = Subscriber(
+            var subscriber = Subscriber(
                 domain: actorDomain,
                 inboxURL: inboxURL,
                 actorID: activity.actor,
-                state: state,
+                state: initialState,
                 followActivityID: activity.id,
                 followObjectURI: objectURI,
                 createdAt: Date(),
                 updatedAt: Date()
             )
+
+            // LitePub: if following relay actor directly and accepted, prepare outbound follow.
+            if objectURI == config.actorURL && initialState == .accepted {
+                subscriber.outboundFollowActivityID = "\(config.baseURL)/activities/\(UUID().uuidString)"
+            }
+
             try await repository.saveSubscriber(subscriber)
+            currentSubscriber = subscriber
         }
 
-        req.logger.notice("Follow from \(actorDomain), state: \(state.rawValue)")
+        req.logger.notice("Follow from \(actorDomain), state: \(effectiveState.rawValue)")
 
-        if state == .accepted {
+        if effectiveState == .accepted {
             try await req.queue.dispatch(
                 AcceptJob.self,
                 AcceptPayload(
@@ -151,6 +180,22 @@ struct InboxController: RouteCollection {
                 ),
                 maxRetryCount: 5
             )
+
+            // LitePub: if instance followed the relay actor directly, follow back.
+            if objectURI == config.actorURL,
+               let outboundFollowID = currentSubscriber?.outboundFollowActivityID
+            {
+                try await req.queue.dispatch(
+                    FollowJob.self,
+                    FollowPayload(
+                        inboxURL: inboxURL,
+                        targetActorID: activity.actor,
+                        followActivityID: outboundFollowID
+                    ),
+                    maxRetryCount: 5
+                )
+            }
+
             try await req.queue.dispatch(
                 InstanceInfoFetchJob.self,
                 InstanceInfoFetchPayload(domain: actorDomain),
@@ -181,7 +226,9 @@ struct InboxController: RouteCollection {
         if innerType == "Follow" {
             let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
 
-            if try await req.repository.getSubscriber(domain: actorDomain) != nil {
+            if let subscriber = try await req.repository.getSubscriber(domain: actorDomain) {
+                // LitePub: if we had an outbound Follow, send Undo Follow back.
+                try await subscriber.dispatchUndoFollowIfNeeded(on: req.queue)
                 try await req.repository.deleteSubscriber(domain: actorDomain)
                 req.logger.notice("Removed subscriber: \(actorDomain)")
             }
@@ -245,6 +292,84 @@ struct InboxController: RouteCollection {
         req.logger.info(
             "Broadcasting \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
         )
+    }
+
+    // MARK: - Accept (LitePub mutual follow)
+
+    private func handleAccept(activity: APActivity, req: Request) async throws {
+        guard let subscriber = try await validateOutboundFollowResponse(activity: activity, req: req)
+        else { return }
+
+        let actorDomain = subscriber.domain
+        req.logger.notice("Instance \(actorDomain) accepted our Follow (mutual follow established)")
+    }
+
+    // MARK: - Reject (LitePub mutual follow)
+
+    private func handleReject(activity: APActivity, req: Request) async throws {
+        guard let subscriber = try await validateOutboundFollowResponse(activity: activity, req: req)
+        else { return }
+
+        let actorDomain = subscriber.domain
+        // Remote already rejected our Follow, so no need to send Undo back.
+        try await req.repository.deleteSubscriber(domain: actorDomain)
+
+        req.logger.notice(
+            "Instance \(actorDomain) rejected our Follow; removed subscriber"
+        )
+    }
+
+    /// Validates that an incoming Accept/Reject references our outbound Follow.
+    /// Returns the matched subscriber, or nil if validation fails.
+    private func validateOutboundFollowResponse(
+        activity: APActivity,
+        req: Request
+    ) async throws -> Subscriber? {
+        let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
+        let config = req.relayConfig
+
+        guard let subscriber = try await req.repository.getSubscriber(domain: actorDomain),
+            let outboundFollowID = subscriber.outboundFollowActivityID
+        else {
+            req.logger.info(
+                "Received \(activity.type) from \(actorDomain) but no outbound Follow tracked, ignoring"
+            )
+            return nil
+        }
+
+        guard subscriber.actorID == activity.actor else {
+            req.logger.info(
+                "\(activity.type) actor \(activity.actor) does not match subscriber actor \(subscriber.actorID), ignoring"
+            )
+            return nil
+        }
+
+        guard let object = activity.object else {
+            req.logger.info("\(activity.type) has no object, ignoring")
+            return nil
+        }
+
+        switch object {
+        case .activity(let inner):
+            guard inner.type == "Follow", inner.actor == config.actorURL,
+                inner.id == outboundFollowID
+            else {
+                req.logger.info("\(activity.type) inner activity is not our Follow, ignoring")
+                return nil
+            }
+        case .uri(let uri):
+            guard uri == outboundFollowID else {
+                req.logger.info("\(activity.type) object URI does not match our Follow, ignoring")
+                return nil
+            }
+        case .object(let obj):
+            guard obj.id == outboundFollowID else {
+                req.logger.info("\(activity.type) object ID does not match our Follow, ignoring")
+                return nil
+            }
+        }
+
+        return subscriber
     }
 
     // MARK: - Helpers

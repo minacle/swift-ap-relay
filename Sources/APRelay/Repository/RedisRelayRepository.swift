@@ -93,6 +93,7 @@ struct RedisRelayRepository: RelayRepository, Sendable {
             "state": .init(from: subscriber.state.rawValue),
             "followActivityID": .init(from: subscriber.followActivityID),
             "followObjectURI": .init(from: subscriber.followObjectURI ?? ""),
+            "outboundFollowActivityID": .init(from: subscriber.outboundFollowActivityID ?? ""),
             "createdAt": .init(from: createdAt),
             "updatedAt": .init(from: now),
         ]
@@ -201,6 +202,9 @@ struct RedisRelayRepository: RelayRepository, Sendable {
         }
 
         let followObjectURI = fields["followObjectURI"]?.string.flatMap { $0.isEmpty ? nil : $0 }
+        let outboundFollowActivityID = fields["outboundFollowActivityID"]?.string.flatMap {
+            $0.isEmpty ? nil : $0
+        }
         let createdAt = fields["createdAt"]?.string.flatMap { parseDate($0) }
         let updatedAt = fields["updatedAt"]?.string.flatMap { parseDate($0) }
 
@@ -211,6 +215,7 @@ struct RedisRelayRepository: RelayRepository, Sendable {
             state: state,
             followActivityID: followActivityID,
             followObjectURI: followObjectURI,
+            outboundFollowActivityID: outboundFollowActivityID,
             createdAt: createdAt,
             updatedAt: updatedAt
         )

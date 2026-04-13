@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- LitePub mutual follow support: relay sends Follow back to instances that follow the relay actor directly, and handles Accept/Reject responses
 - Relay support for Move, Add, Remove, and Undo (non-Follow) activity types
 - Periodic instance info fetching for subscriber instances with software name/version, registration status, staff accounts, reachability, and favicon displayed on the homepage
 - `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 300 seconds, minimum: 60)
