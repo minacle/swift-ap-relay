@@ -153,6 +153,11 @@ struct InboxController: RouteCollection {
                 ),
                 maxRetryCount: 5
             )
+            try await req.queue.dispatch(
+                InstanceInfoFetchJob.self,
+                InstanceInfoFetchPayload(domain: actorDomain),
+                maxRetryCount: 0
+            )
         }
     }
 

@@ -43,6 +43,11 @@ struct AdminAPIController: RouteCollection {
             ),
             maxRetryCount: 5
         )
+        try await req.queue.dispatch(
+            InstanceInfoFetchJob.self,
+            InstanceInfoFetchPayload(domain: domain),
+            maxRetryCount: 0
+        )
 
         return AdminResponse(status: "accepted", domain: domain)
     }
