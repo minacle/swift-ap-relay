@@ -33,6 +33,8 @@ APRelay relays activities between federated instances, enabling cross-instance c
 - Add
 - Remove
 - Undo
+- Like
+- EmojiReact
 
 ## Requirements
 
