@@ -118,6 +118,84 @@ enum TestSigning {
         )
     }
 
+    /// Creates a Move activity (account migration).
+    static func makeMoveActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Move",
+            actor: actor,
+            object: .uri(actor),
+            to: .single("https://www.w3.org/ns/activitystreams#Public"),
+            cc: nil,
+            published: nil
+        )
+    }
+
+    /// Creates an Add activity (e.g. pinning a post).
+    static func makeAddActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Add",
+            actor: actor,
+            object: .uri("https://remote.example/notes/\(UUID().uuidString)"),
+            to: .single("https://www.w3.org/ns/activitystreams#Public"),
+            cc: nil,
+            published: nil
+        )
+    }
+
+    /// Creates a Remove activity (e.g. unpinning a post).
+    static func makeRemoveActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Remove",
+            actor: actor,
+            object: .uri("https://remote.example/notes/\(UUID().uuidString)"),
+            to: .single("https://www.w3.org/ns/activitystreams#Public"),
+            cc: nil,
+            published: nil
+        )
+    }
+
+    /// Creates an Undo activity wrapping an Announce.
+    static func makeUndoAnnounceActivity(
+        id: String = "https://remote.example/activities/\(UUID().uuidString)",
+        actor: String = testActorID,
+        announceID: String = "https://remote.example/activities/announce-1"
+    ) -> APActivity {
+        APActivity(
+            context: .default,
+            id: id,
+            type: "Undo",
+            actor: actor,
+            object: .activity(APActivity(
+                context: nil,
+                id: announceID,
+                type: "Announce",
+                actor: actor,
+                object: .uri("https://remote.example/notes/1"),
+                to: nil,
+                cc: nil,
+                published: nil
+            )),
+            to: nil,
+            cc: nil,
+            published: nil
+        )
+    }
+
     /// Encodes an activity and returns the signed (headers, body) pair.
     static func signedRequest(
         activity: APActivity,

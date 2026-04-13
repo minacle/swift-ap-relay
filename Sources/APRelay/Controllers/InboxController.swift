@@ -79,11 +79,9 @@ struct InboxController: RouteCollection {
                     req: req
                 )
             case "Undo":
-                try await handleUndo(activity: activity, req: req)
-            case "Create", "Announce":
-                try await handleRelay(activity: activity, body: Data(buffer: body), req: req)
-            case "Delete", "Update":
-                try await handleForward(activity: activity, body: Data(buffer: body), req: req)
+                try await handleUndo(activity: activity, body: Data(buffer: body), req: req)
+            case "Create", "Announce", "Delete", "Update", "Move", "Add", "Remove":
+                try await handleActivity(activity: activity, body: Data(buffer: body), req: req)
             default:
                 req.logger.info("Ignoring unsupported activity type: \(activity.type)")
             }
@@ -165,6 +163,7 @@ struct InboxController: RouteCollection {
 
     private func handleUndo(
         activity: APActivity,
+        body: Data,
         req: Request
     ) async throws {
         guard let object = activity.object else { return }
@@ -179,22 +178,21 @@ struct InboxController: RouteCollection {
             innerType = "Follow"
         }
 
-        guard innerType == "Follow" else {
-            req.logger.info("Undo of non-Follow activity, ignoring")
-            return
-        }
+        if innerType == "Follow" {
+            let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
 
-        let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
-
-        if try await req.repository.getSubscriber(domain: actorDomain) != nil {
-            try await req.repository.deleteSubscriber(domain: actorDomain)
-            req.logger.notice("Removed subscriber: \(actorDomain)")
+            if try await req.repository.getSubscriber(domain: actorDomain) != nil {
+                try await req.repository.deleteSubscriber(domain: actorDomain)
+                req.logger.notice("Removed subscriber: \(actorDomain)")
+            }
+        } else {
+            try await handleActivity(activity: activity, body: body, req: req)
         }
     }
 
-    // MARK: - Relay (Create/Announce)
+    // MARK: - Activity (Broadcast)
 
-    private func handleRelay(
+    private func handleActivity(
         activity: APActivity,
         body: Data,
         req: Request
@@ -210,69 +208,42 @@ struct InboxController: RouteCollection {
             return
         }
 
+        // Create/Announce are wrapped in a relay-attributed Announce;
+        // all other types are forwarded as-is.
+        let payload: Data
+        switch activity.type {
+        case "Create", "Announce":
+            let config = req.relayConfig
+            let objectURI = activity.object?.uriOrID ?? activity.id
+
+            let announce = APActivity(
+                context: .default,
+                id: "\(config.baseURL)/activities/\(UUID().uuidString)",
+                type: "Announce",
+                actor: config.actorURL,
+                object: .uri(objectURI),
+                to: .single("https://www.w3.org/ns/activitystreams#Public"),
+                cc: nil,
+                published: ISO8601DateFormatter().string(from: Date())
+            )
+            payload = try JSONEncoder.apRelay.encode(announce)
+        default:
+            payload = body
+        }
+
         let inboxURLs = try await repository.getAcceptedInboxURLs()
-
-        let config = req.relayConfig
-        let objectURI = activity.object?.uriOrID ?? activity.id
-
-        let announce = APActivity(
-            context: .default,
-            id: "\(config.baseURL)/activities/\(UUID().uuidString)",
-            type: "Announce",
-            actor: config.actorURL,
-            object: .uri(objectURI),
-            to: .single("https://www.w3.org/ns/activitystreams#Public"),
-            cc: nil,
-            published: ISO8601DateFormatter().string(from: Date())
-        )
-
-        let announceData = try JSONEncoder.apRelay.encode(announce)
 
         let targetInboxes = inboxURLs.filter { $0 != subscriber.inboxURL }
         for inbox in targetInboxes {
             try await req.queue.dispatch(
                 DeliveryJob.self,
-                DeliveryPayload(activity: announceData, inboxURL: inbox),
+                DeliveryPayload(activity: payload, inboxURL: inbox),
                 maxRetryCount: 5
             )
         }
 
         req.logger.info(
-            "Relaying \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
-        )
-    }
-
-    // MARK: - Forward (Delete/Update)
-
-    private func handleForward(
-        activity: APActivity,
-        body: Data,
-        req: Request
-    ) async throws {
-        let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
-        let repository = req.repository
-
-        guard
-            let sender = try await repository.getSubscriber(domain: actorDomain),
-            sender.state == .accepted
-        else {
-            req.logger.info("Forward from non-subscriber \(actorDomain), ignoring")
-            return
-        }
-
-        let inboxURLs = try await repository.getAcceptedInboxURLs()
-
-        let targetInboxes = inboxURLs.filter { $0 != sender.inboxURL }
-        for inbox in targetInboxes {
-            try await req.queue.dispatch(
-                DeliveryJob.self,
-                DeliveryPayload(activity: body, inboxURL: inbox),
-                maxRetryCount: 5
-            )
-        }
-
-        req.logger.info(
-            "Forwarding \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
+            "Broadcasting \(activity.type) from \(actorDomain) to \(targetInboxes.count) subscribers"
         )
     }
 

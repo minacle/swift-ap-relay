@@ -9,7 +9,7 @@ APRelay relays activities between federated instances, enabling cross-instance c
 
 ## Features
 
-- ActivityPub relay (Create, Announce, etc.)
+- ActivityPub relay
 - Authorized Fetch (signed GET requests) support
 - Subscriber management with pending / accepted / rejected states
 - Manual accept mode for controlled federation
@@ -23,6 +23,17 @@ APRelay relays activities between federated instances, enabling cross-instance c
 - Dark mode & responsive homepage with status badges
 - Version tracking with git-based auto-detection
 - Admin REST API & CLI commands
+
+## Supported Activities
+
+- Create
+- Announce
+- Delete
+- Update
+- Move
+- Add
+- Remove
+- Undo
 
 ## Requirements
 
