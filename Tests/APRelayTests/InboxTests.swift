@@ -610,7 +610,7 @@ struct InboxTests {
             let activity = APActivity(
                 context: .default,
                 id: "https://remote.example/activities/\(UUID().uuidString)",
-                type: "Like",
+                type: "Question",
                 actor: TestSigning.testActorID,
                 object: .uri("https://remote.example/notes/1"),
                 to: nil,
