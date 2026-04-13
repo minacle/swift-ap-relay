@@ -210,6 +210,9 @@ header h1 {
     font-weight: 500;
     font-size: 0.9rem;
     color: var(--text);
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 a.instance-domain:hover {
@@ -247,6 +250,8 @@ a.instance-domain:hover {
 .instance-software {
     font-size: 0.75rem;
     color: var(--text-muted);
+    overflow-x: hidden;
+    text-overflow: ellipsis;
 }
 
 .badge-sm {
@@ -314,7 +319,7 @@ footer {
     }
 
     .instance-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .card {
