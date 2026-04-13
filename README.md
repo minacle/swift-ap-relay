@@ -29,7 +29,7 @@ APRelay relays activities between federated instances, enabling cross-instance c
 | Component | Version |
 |-----------|---------|
 | Swift | 6.3+ |
-| macOS | 14+ |
+| OS | macOS 14+ / Linux |
 | Redis (or Valkey) | 7+ |
 
 ## Getting Started
