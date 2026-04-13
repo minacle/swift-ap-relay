@@ -9,7 +9,6 @@ APRelay relays activities between federated instances, enabling cross-instance c
 
 ## Features
 
-- ActivityPub relay
 - Authorized Fetch (signed GET requests) support
 - Subscriber management with pending / accepted / rejected states
 - Manual accept mode for controlled federation
