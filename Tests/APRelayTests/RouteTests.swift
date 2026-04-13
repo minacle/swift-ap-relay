@@ -15,6 +15,20 @@ struct RouteTests {
         }
     }
 
+    @Test("GET / includes OpenGraph and Twitter Card meta tags")
+    func indexPageHasMetaTags() async throws {
+        try await withApp(configure: testConfigure) { app in
+            try await app.testing().test(.GET, "/") { res async in
+                #expect(res.status == .ok)
+                let body = res.body.string
+                #expect(body.contains("og:title"))
+                #expect(body.contains("og:url"))
+                #expect(body.contains("og:type"))
+                #expect(body.contains("twitter:card"))
+            }
+        }
+    }
+
     @Test("GET /actor returns ActivityPub actor")
     func actorEndpoint() async throws {
         try await withApp(configure: testConfigure) { app in

@@ -4,6 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
+    #if(hasDescription):
+    <meta name="description" content="#(ogDescription)">
+    #endif
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="#(relayName)">
+    <meta property="og:site_name" content="#(relayName)">
+    <meta property="og:url" content="#(relayURL)">
+    #if(hasDescription):
+    <meta property="og:description" content="#(ogDescription)">
+    #endif
+    <meta name="twitter:card" content="summary">
     <title>#(relayName)</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>

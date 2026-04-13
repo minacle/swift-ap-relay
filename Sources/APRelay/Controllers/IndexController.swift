@@ -36,6 +36,8 @@ struct IndexController: RouteCollection {
             actorURL: config.actorURL,
             description: description,
             hasDescription: !description.isEmpty,
+            ogDescription: stripHTMLTags(from: description),
+            relayURL: config.baseURL,
             footer: footer,
             hasFooter: !footer.isEmpty,
             subscribers: sortedSubscribers.map { subscriber in
@@ -92,6 +94,8 @@ private struct IndexContext: Encodable {
     let actorURL: String
     let description: String
     let hasDescription: Bool
+    let ogDescription: String
+    let relayURL: String
     let footer: String
     let hasFooter: Bool
     let subscribers: [SubscriberItem]
