@@ -84,7 +84,7 @@ struct InboxController: RouteCollection {
                 try await handleAccept(activity: activity, req: req)
             case "Reject":
                 try await handleReject(activity: activity, req: req)
-            case "Create", "Announce", "Delete", "Update", "Move", "Add", "Remove":
+            case "Create", "Announce", "Delete", "Update", "Move", "Add", "Remove", "Like", "EmojiReact":
                 try await handleActivity(activity: activity, body: Data(buffer: body), req: req)
             default:
                 req.logger.info("Ignoring unsupported activity type: \(activity.type)")
