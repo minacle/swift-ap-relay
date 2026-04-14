@@ -33,7 +33,7 @@ struct InstanceInfoFetchJob: AsyncJob {
             lastCheckedAt: Date()
         )
         try? await cache.setInstanceInfo(domain: payload.domain, info: failedInfo)
-        context.logger.debug("Instance info check failed for \(payload.domain): \(error)")
+        context.logger.warning("Instance info check failed for \(payload.domain): \(error)")
     }
 }
 
@@ -52,7 +52,7 @@ private func fetchInstanceInfo(domain: String, client: any Client, allowedPrivat
     }
 
     guard wellKnownResponse.status == .ok else {
-        throw InstanceInfoFetchError.wellKnownFailed(wellKnownResponse.status)
+        throw InstanceInfoFetchError.wellKnownFailed(domain, wellKnownResponse.status)
     }
 
     let wellKnown = try wellKnownResponse.content.decode(NodeInfoWellKnown.self)
@@ -61,7 +61,7 @@ private func fetchInstanceInfo(domain: String, client: any Client, allowedPrivat
     guard let link = nodeInfoSchemas.lazy.compactMap({ schema in
         wellKnown.links.first { $0.rel == schema }
     }).first else {
-        throw InstanceInfoFetchError.noSupportedSchema
+        throw InstanceInfoFetchError.noSupportedSchema(domain)
     }
 
     // Step 3: Validate the NodeInfo URL before fetching
@@ -74,7 +74,7 @@ private func fetchInstanceInfo(domain: String, client: any Client, allowedPrivat
     }
 
     guard nodeInfoResponse.status == .ok else {
-        throw InstanceInfoFetchError.nodeInfoFailed(nodeInfoResponse.status)
+        throw InstanceInfoFetchError.nodeInfoFailed(domain, nodeInfoResponse.status)
     }
 
     let nodeInfo = try nodeInfoResponse.content.decode(NodeInfoResponse.self)
@@ -206,8 +206,19 @@ private let allowedSchemes: Set<String> = [
     "https", "http", "mailto", "xmpp", "matrix", "tel",
 ]
 
-private enum InstanceInfoFetchError: Error {
-    case wellKnownFailed(HTTPResponseStatus)
-    case noSupportedSchema
-    case nodeInfoFailed(HTTPResponseStatus)
+private enum InstanceInfoFetchError: Error, CustomStringConvertible {
+    case wellKnownFailed(String, HTTPResponseStatus)
+    case noSupportedSchema(String)
+    case nodeInfoFailed(String, HTTPResponseStatus)
+
+    var description: String {
+        switch self {
+        case .wellKnownFailed(let domain, let status):
+            return "Well-known fetch failed for \(domain): \(status)"
+        case .noSupportedSchema(let domain):
+            return "No supported NodeInfo schema for \(domain)"
+        case .nodeInfoFailed(let domain, let status):
+            return "NodeInfo fetch failed for \(domain): \(status)"
+        }
+    }
 }
