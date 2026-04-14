@@ -17,10 +17,8 @@ struct IndexController: RouteCollection {
         dateFormatter.dateFormat = "MMM yyyy"
         dateFormatter.locale = Locale(identifier: locale)
 
-        let sortedSubscribers = subscribers.sorted { $0.domain < $1.domain }
-
         // Fetch cached instance info for all subscriber domains.
-        let domains = sortedSubscribers.map(\.domain)
+        let domains = subscribers.map(\.domain)
         let instanceInfoMap = try await req.instanceInfoCache.getAllInstanceInfo(domains: domains)
 
         // Resolve locale-specific name, description, and footer
@@ -40,7 +38,7 @@ struct IndexController: RouteCollection {
             relayURL: config.baseURL,
             footer: footer,
             hasFooter: !footer.isEmpty,
-            subscribers: sortedSubscribers.map { subscriber in
+            subscribers: subscribers.map { subscriber in
                 let info = instanceInfoMap[subscriber.domain]
                 return SubscriberItem(
                     domain: subscriber.domain,

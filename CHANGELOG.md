@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Homepage instance list now displays subscribers in join order instead of alphabetical order
 - Prometheus metrics endpoint moved to a dedicated server controlled by `METRICS_BIND` environment variable
 - Delivery jobs now run on a dedicated queue separate from the default job queue
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
