@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 300 seconds, minimum: 60)
 - `ALLOWED_PRIVATE_ADDRESSES` environment variable to whitelist private IP CIDR ranges for internal/test cluster deployments
 - `DEFAULT_QUEUE_WORKER_COUNT` and `DELIVERY_QUEUE_WORKER_COUNT` environment variables for configurable queue worker counts
+- `SOURCE_REPOSITORY_URL` and `SOURCE_REPOSITORY_COMMIT_PATH` environment variables for configurable source repository links
 
 ### Changed
 

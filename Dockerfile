@@ -79,8 +79,12 @@ COPY --from=build --chown=vapor:vapor /staging /app
 # Inject version info for runtime override
 ARG AP_RELAY_VERSION=""
 ARG SOURCE_COMMIT=""
+ARG SOURCE_REPOSITORY_URL=""
+ARG SOURCE_REPOSITORY_COMMIT_PATH=""
 ENV AP_RELAY_VERSION="${AP_RELAY_VERSION}"
 ENV SOURCE_COMMIT="${SOURCE_COMMIT}"
+ENV SOURCE_REPOSITORY_URL="${SOURCE_REPOSITORY_URL}"
+ENV SOURCE_REPOSITORY_COMMIT_PATH="${SOURCE_REPOSITORY_COMMIT_PATH}"
 
 # Provide configuration needed by the built-in crash reporter and some sensible default behaviors.
 ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=no,swift-backtrace=./swift-backtrace-static

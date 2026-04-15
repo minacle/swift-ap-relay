@@ -26,6 +26,7 @@ jobs:
       build-args: |
         SOURCE_COMMIT=${{ github.sha }}
         AP_RELAY_VERSION=${{ github.ref_name }}
+        SOURCE_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
       meta-images: ghcr.io/${{ github.repository }}
       meta-tags: |
         type=semver,pattern={{version}}

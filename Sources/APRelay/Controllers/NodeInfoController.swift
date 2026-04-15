@@ -31,7 +31,7 @@ struct NodeInfoController: RouteCollection {
             software: NodeInfoSoftware(
                 name: "ap-relay",
                 version: AppInfo.version,
-                repository: "https://github.com/sinoru/swift-ap-relay"
+                repository: AppInfo.repositoryURL
             ),
             protocols: ["activitypub"],
             services: NodeInfoServices(inbound: [], outbound: []),
