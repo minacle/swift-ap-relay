@@ -1,4 +1,3 @@
-import Foundation
 @testable import APRelay
 
 /// In-memory implementation of ``InstanceInfoCaching`` for testing.
