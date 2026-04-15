@@ -1,8 +1,17 @@
 import APRelayCore
+import Foundation
 import SwiftSoup
 import Testing
 import VaporTesting
 @testable import APRelay
+
+/// Minimal Leaf context for testing version-info template branches
+/// without going through the controller.
+private struct VersionInfoTestContext: Encodable {
+    let softwareVersion: String
+    let shortCommit: String?
+    let sourceURL: String?
+}
 
 @Suite("HTML Render Tests")
 struct HTMLRenderTests {
@@ -67,7 +76,7 @@ struct HTMLRenderTests {
                 #expect(!metaDesc.isEmpty())
                 #expect(try metaDesc.first()?.attr("content") == "Test relay description")
 
-                let ogDesc = try doc.select("[property=og:description]")
+                let ogDesc = try doc.select(#"[property="og:description"]"#)
                 #expect(!ogDesc.isEmpty())
                 #expect(try ogDesc.first()?.attr("content") == "Test relay description")
             }
@@ -81,7 +90,7 @@ struct HTMLRenderTests {
                 let doc = try SwiftSoup.parse(res.body.string)
                 #expect(try doc.select(".description").isEmpty())
                 #expect(try doc.select("[name=description]").isEmpty())
-                #expect(try doc.select("[property=og:description]").isEmpty())
+                #expect(try doc.select(#"[property="og:description"]"#).isEmpty())
             }
         }
     }
@@ -380,8 +389,10 @@ struct HTMLRenderTests {
 
             try await app.testing().test(.GET, "/") { res async throws in
                 let doc = try SwiftSoup.parse(res.body.string)
-                let favicon = try doc.select(".instance-favicon[src=https://cdn.example.com/favicon.png]")
+                let favicon = try doc.select(".instance-favicon")
                 #expect(!favicon.isEmpty())
+                let src = try favicon.first()?.attr("src") ?? ""
+                #expect(src == "https://cdn.example.com/favicon.png")
             }
         }
     }
@@ -411,8 +422,7 @@ struct HTMLRenderTests {
                 let software = try doc.select(".instance-software")
                 #expect(!software.isEmpty())
                 let text = try software.first()?.text() ?? ""
-                #expect(text.contains("Pleroma"))
-                #expect(!text.contains(" "), "Version should not appear when softwareVersion is nil")
+                #expect(text == "Pleroma", "Software name should render without a version when softwareVersion is nil")
                 // No registration info → no registration badge
                 #expect(try doc.select(".instance-meta .badge.badge-sm").isEmpty())
             }
@@ -486,8 +496,19 @@ struct HTMLRenderTests {
 
     // MARK: - Version Info / Commit
 
-    @Test("Version info section renders APRelay version with commit link")
-    func versionInfoRendersCommitLink() async throws {
+    @Test("Version info renders commit link when SOURCE_COMMIT is set")
+    func versionInfoRendersCommitLinkWithCommit() async throws {
+        let knownCommit = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        let previous = ProcessInfo.processInfo.environment["SOURCE_COMMIT"]
+        unsafe setenv("SOURCE_COMMIT", knownCommit, 1)
+        defer {
+            if let previous {
+                unsafe setenv("SOURCE_COMMIT", previous, 1)
+            } else {
+                unsafe unsetenv("SOURCE_COMMIT")
+            }
+        }
+
         try await withApp(configure: testConfigure) { app in
             try await app.testing().test(.GET, "/") { res async throws in
                 let doc = try SwiftSoup.parse(res.body.string)
@@ -496,12 +517,34 @@ struct HTMLRenderTests {
                 let text = try versionInfo.first()?.text() ?? ""
                 #expect(text.contains("APRelay"))
 
-                // In the test build environment, GeneratedBuildInfo.commit is non-empty
-                // (from git rev-parse HEAD), so shortCommit and sourceURL are both set.
-                // This verifies the #if(shortCommit) + #if(sourceURL) true paths.
                 let commitLink = try doc.select(".version-info a[href]")
                 #expect(!commitLink.isEmpty())
+                let href = try commitLink.first()?.attr("href") ?? ""
+                #expect(href.contains(knownCommit))
             }
+        }
+    }
+
+    @Test("Version info renders without commit link when shortCommit is nil")
+    func versionInfoRendersWithoutCommitLink() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let context = VersionInfoTestContext(
+                softwareVersion: "1.0.0",
+                shortCommit: nil,
+                sourceURL: nil
+            )
+            let buf = try await app.view.render("index", context).data
+            let html = String(buffer: buf)
+            let doc = try SwiftSoup.parse(html)
+
+            let versionInfo = try doc.select(".version-info")
+            #expect(!versionInfo.isEmpty())
+            let text = try versionInfo.first()?.text() ?? ""
+            #expect(text.contains("APRelay"))
+            #expect(text.contains("1.0.0"))
+
+            let commitLink = try doc.select(".version-info a[href]")
+            #expect(commitLink.isEmpty())
         }
     }
 }

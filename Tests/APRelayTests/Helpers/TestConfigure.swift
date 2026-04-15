@@ -3,7 +3,7 @@ import Vapor
 import XCTQueues
 @testable import APRelay
 
-/// Configures the app for testing with mock repository and actor fetcher.
+/// Configures the app for testing with mock repository, deduplicator, instance info cache, and actor fetcher.
 func testConfigure(_ app: Application) async throws {
     app.repositoryOverride = MockRelayRepository()
     app.deduplicatorOverride = MockActivityDeduplicator()
