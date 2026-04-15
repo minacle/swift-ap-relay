@@ -13,7 +13,7 @@ private struct VersionInfoTestContext: Encodable {
     let sourceURL: String?
 }
 
-@Suite("HTML Render Tests")
+@Suite("HTML Render Tests", .serialized)
 struct HTMLRenderTests {
 
     // MARK: - Mode Badges
