@@ -1,3 +1,4 @@
+import JSON
 import Vapor
 
 struct NodeInfoController: RouteCollection {
@@ -33,12 +34,13 @@ struct NodeInfoController: RouteCollection {
                 repository: "https://github.com/sinoru/swift-ap-relay"
             ),
             protocols: ["activitypub"],
+            services: NodeInfoServices(inbound: [], outbound: []),
             usage: NodeInfoUsage(
                 users: NodeInfoUsers(total: 0, activeMonth: 0, activeHalfyear: 0),
                 localPosts: 0
             ),
             openRegistrations: !config.restrictedMode,
-            metadata: NodeInfoMetadata(peers: peers, staffAccounts: nil)
+            metadata: ["peers": .array(peers.map { .string($0) })]
         )
     }
 }

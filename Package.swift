@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "APRelay",
     platforms: [
-        .macOS(.v14),
+        .macOS(.v15),
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/vapor.git", from: "4.99.0"),
@@ -14,6 +14,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-crypto.git", "3.0.0" ..< "5.0.0"),
         .package(url: "https://github.com/swift-server/swift-prometheus.git", from: "2.0.0"),
         .package(url: "https://github.com/vapor/leaf.git", from: "4.4.0"),
+        .package(url: "https://github.com/sinoru/swift-json.git", from: "0.2.0"),
     ],
     targets: [
         .plugin(
@@ -36,6 +37,7 @@ let package = Package(
                 .product(name: "QueuesRedisDriver", package: "queues-redis-driver"),
                 .product(name: "Prometheus", package: "swift-prometheus"),
                 .product(name: "Leaf", package: "leaf"),
+                .product(name: "JSON", package: "swift-json"),
             ],
             swiftSettings: [.strictMemorySafety()],
             plugins: [

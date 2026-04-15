@@ -1,5 +1,5 @@
 {
-  "originHash" : "d04d78627d1f5aec624188db5e8e6c455d4db98ca3cac2d1986c3448d11236bf",
+  "originHash" : "f8053d200b7b180ac10f77d4aa35aacd16e9fdc005025b0cb4bb28f7a35e802e",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -197,6 +197,15 @@
       "state" : {
         "revision" : "45eb0224913ea070ec4fba17291b9e7ecf4749ca",
         "version" : "1.5.1"
+      }
+    },
+    {
+      "identity" : "swift-json",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sinoru/swift-json.git",
+      "state" : {
+        "revision" : "097cf2f0f269d94d6aef7539c1e5db20faeae9c1",
+        "version" : "0.2.0"
       }
     },
     {

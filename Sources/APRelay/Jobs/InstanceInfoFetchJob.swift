@@ -79,10 +79,12 @@ private func fetchInstanceInfo(domain: String, client: any Client, allowedPrivat
 
     let nodeInfo = try nodeInfoResponse.content.decode(NodeInfoResponse.self)
 
-    let safeStaffAccounts = nodeInfo.metadata?.staffAccounts?.filter { uri in
-        guard let colonIndex = uri.firstIndex(of: ":") else { return false }
-        return allowedSchemes.contains(uri[..<colonIndex].lowercased())
-    }
+    let safeStaffAccounts = nodeInfo.metadata["staffAccounts"]?.array?
+        .compactMap(\.string)
+        .filter { uri in
+            guard let colonIndex = uri.firstIndex(of: ":") else { return false }
+            return allowedSchemes.contains(uri[..<colonIndex].lowercased())
+        }
 
     // Step 5: Fetch favicon URL from the instance homepage
     let faviconURL = await fetchFaviconURL(domain: domain, client: client, allowedPrivateAddresses: allowedPrivateAddresses)
