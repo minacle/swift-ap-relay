@@ -15,6 +15,7 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-prometheus.git", from: "2.0.0"),
         .package(url: "https://github.com/vapor/leaf.git", from: "4.4.0"),
         .package(url: "https://github.com/sinoru/swift-json.git", from: "0.2.0"),
+        .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.13.4"),
     ],
     targets: [
         .plugin(
@@ -53,6 +54,7 @@ let package = Package(
             name: "APRelayTests",
             dependencies: [
                 "APRelay",
+                "SwiftSoup",
                 .product(name: "VaporTesting", package: "vapor"),
                 .product(name: "XCTQueues", package: "queues"),
             ],
