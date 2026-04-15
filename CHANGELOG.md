@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NodeInfo response now includes required `services` field and uses free-form `metadata` per NodeInfo 2.1 schema
 - Homepage now shows subscriber instance details immediately after server boot instead of waiting for the first scheduled check
 - InstanceInfoFetchJob error logs now include the failing domain name for diagnosis
+- Large ActivityPub payloads (e.g. long posts, many mentions) now accepted instead of returning 413 Payload Too Large
 
 ### Security
 

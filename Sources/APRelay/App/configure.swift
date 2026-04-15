@@ -8,6 +8,9 @@ import Redis
 import Vapor
 
 func configure(_ app: Application) async throws {
+    // Increase default body size limit for ActivityPub payloads.
+    app.routes.defaultMaxBodySize = "2mb"
+
     // Register shared JSON encoder for deterministic key ordering (cache-friendly).
     ContentConfiguration.global.use(encoder: JSONEncoder.apRelay, for: .json)
     ContentConfiguration.global.use(encoder: JSONEncoder.apRelay, for: .init(type: "application", subType: "activity+json"))
