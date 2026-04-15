@@ -64,6 +64,12 @@ swift run APRelay serve
 swift test
 ```
 
+#### Using Docker
+
+```bash
+docker run --rm -v "$(pwd):/build" -w /build swift:6.3-noble swift test
+```
+
 ## Docker
 
 ### Using Docker Compose (recommended)
