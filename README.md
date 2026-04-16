@@ -70,6 +70,30 @@ swift test
 docker run --rm -v "$(pwd):/build" -w /build swift:6.3-noble swift test
 ```
 
+#### HTML Snapshots
+
+To visually inspect the rendered homepage without running the server, generate self-contained HTML snapshots by setting the `HTML_SNAPSHOT_DIR` environment variable:
+
+```bash
+HTML_SNAPSHOT_DIR=html-snapshots swift test --filter HTMLSnapshotTests
+open html-snapshots/
+```
+
+Snapshots are organized by locale and scenario:
+
+```
+html-snapshots/
+  en/
+    default.html
+    restricted-mode.html
+    with-subscribers.html
+    ...
+  ja/
+  ko/
+```
+
+Each file inlines the CSS so it can be opened directly in a browser. The snapshot directory is automatically `.gitignore`d on first run.
+
 ## Docker
 
 ### Using Docker Compose (recommended)
