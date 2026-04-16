@@ -34,6 +34,9 @@ import VaporTesting
 )
 struct HTMLSnapshotTests {
 
+    /// A fixed date for deterministic snapshot output (2026-01-01T00:00:00Z).
+    private static let fixedDate = Date(timeIntervalSince1970: 1767225600)
+
     // MARK: - Default State
 
     @Test("Default page")
@@ -85,7 +88,7 @@ struct HTMLSnapshotTests {
                 actorID: "https://mastodon.social/actor",
                 state: .accepted,
                 followActivityID: "https://mastodon.social/activity/1",
-                createdAt: Date()
+                createdAt: Self.fixedDate
             ))
             try await app.repository.saveSubscriber(Subscriber(
                 domain: "misskey.io",
@@ -93,7 +96,7 @@ struct HTMLSnapshotTests {
                 actorID: "https://misskey.io/actor",
                 state: .accepted,
                 followActivityID: "https://misskey.io/activity/1",
-                createdAt: Date()
+                createdAt: Self.fixedDate
             ))
             try await app.repository.saveSubscriber(Subscriber(
                 domain: "pleroma.example.com",
@@ -101,7 +104,7 @@ struct HTMLSnapshotTests {
                 actorID: "https://pleroma.example.com/actor",
                 state: .accepted,
                 followActivityID: "https://pleroma.example.com/activity/1",
-                createdAt: Date()
+                createdAt: Self.fixedDate
             ))
 
             let cache = app.instanceInfoCacheOverride as! MockInstanceInfoCache
@@ -111,19 +114,19 @@ struct HTMLSnapshotTests {
                 openRegistrations: true,
                 staffAccounts: ["https://mastodon.social/@admin"],
                 isReachable: true,
-                lastCheckedAt: Date()
+                lastCheckedAt: Self.fixedDate
             ))
             try await cache.setInstanceInfo(domain: "misskey.io", info: InstanceInfo(
                 softwareName: "Misskey",
                 softwareVersion: "2024.11.0",
                 openRegistrations: false,
                 isReachable: true,
-                lastCheckedAt: Date()
+                lastCheckedAt: Self.fixedDate
             ))
             try await cache.setInstanceInfo(domain: "pleroma.example.com", info: InstanceInfo(
                 softwareName: "Pleroma",
                 isReachable: false,
-                lastCheckedAt: Date()
+                lastCheckedAt: Self.fixedDate
             ))
 
             try await saveHTMLSnapshotsForAllLocales(name: "with-subscribers", app: app)
