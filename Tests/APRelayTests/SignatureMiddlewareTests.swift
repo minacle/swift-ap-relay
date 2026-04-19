@@ -151,6 +151,105 @@ struct SignatureMiddlewareTests {
         }
     }
 
+    @Test("Date omitted from signed headers returns 401")
+    func dateNotInSignedHeaders() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let activity = TestSigning.makeFollowActivity()
+            let data = try JSONEncoder().encode(activity)
+
+            let httpSig = HTTPSignature()
+            let dateStr = httpSig.formatHTTPDate(Date())
+            let digest = "SHA-256=\(Data(SHA256.hash(data: data)).base64EncodedString())"
+            let contentType = "application/activity+json"
+            let host = "localhost"
+
+            // Sign without `date` in the signed headers list.
+            let signingString = [
+                "(request-target): post /inbox",
+                "host: \(host)",
+                "digest: \(digest)",
+                "content-type: \(contentType)",
+            ].joined(separator: "\n")
+
+            let signature = try TestSigning.privateKey.signature(
+                for: Data(signingString.utf8),
+                padding: .insecurePKCS1v1_5
+            )
+            let sigBase64 = signature.rawRepresentation.base64EncodedString()
+
+            let sigHeader =
+                "keyId=\"\(TestSigning.testActorID)#main-key\","
+                + "algorithm=\"rsa-sha256\","
+                + "headers=\"(request-target) host digest content-type\","
+                + "signature=\"\(sigBase64)\""
+
+            var headers = HTTPHeaders()
+            headers.add(name: "Host", value: host)
+            headers.add(name: "Date", value: dateStr)  // Present but not signed.
+            headers.add(name: "Digest", value: digest)
+            headers.add(name: "Content-Type", value: contentType)
+            headers.add(name: "Signature", value: sigHeader)
+
+            try await app.testing().test(
+                .POST,
+                "inbox",
+                headers: headers,
+                body: ByteBuffer(data: data)
+            ) { res async in
+                #expect(res.status == .unauthorized)
+            }
+        }
+    }
+
+    @Test("Digest omitted from signed headers on POST returns 401")
+    func digestNotInSignedHeaders() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let activity = TestSigning.makeFollowActivity()
+            let data = try JSONEncoder().encode(activity)
+
+            let httpSig = HTTPSignature()
+            let dateStr = httpSig.formatHTTPDate(Date())
+            let digest = "SHA-256=\(Data(SHA256.hash(data: data)).base64EncodedString())"
+            let host = "localhost"
+
+            // Sign POST without `digest` in the signed headers list, even
+            // though the Digest HTTP header is present and matches the body.
+            let signingString = [
+                "(request-target): post /inbox",
+                "host: \(host)",
+                "date: \(dateStr)",
+            ].joined(separator: "\n")
+
+            let signature = try TestSigning.privateKey.signature(
+                for: Data(signingString.utf8),
+                padding: .insecurePKCS1v1_5
+            )
+            let sigBase64 = signature.rawRepresentation.base64EncodedString()
+
+            let sigHeader =
+                "keyId=\"\(TestSigning.testActorID)#main-key\","
+                + "algorithm=\"rsa-sha256\","
+                + "headers=\"(request-target) host date\","
+                + "signature=\"\(sigBase64)\""
+
+            var headers = HTTPHeaders()
+            headers.add(name: "Host", value: host)
+            headers.add(name: "Date", value: dateStr)
+            headers.add(name: "Digest", value: digest)  // Present but not signed.
+            headers.add(name: "Content-Type", value: "application/activity+json")
+            headers.add(name: "Signature", value: sigHeader)
+
+            try await app.testing().test(
+                .POST,
+                "inbox",
+                headers: headers,
+                body: ByteBuffer(data: data)
+            ) { res async in
+                #expect(res.status == .unauthorized)
+            }
+        }
+    }
+
     @Test("Missing Digest header on POST returns 401")
     func missingDigest() async throws {
         try await withApp(configure: testConfigure) { app in

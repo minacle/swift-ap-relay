@@ -25,21 +25,41 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
             throw Self.genericFailure
         }
 
-        // Validate Date header if it is in the signed headers list.
-        if components.headers.contains(where: { $0.lowercased() == "date" }) {
-            guard let dateStr = request.headers.first(name: "Date") else {
-                request.logger.warning("Signature verification failed: missing Date header")
-                throw Self.genericFailure
-            }
-            guard let date = httpSignature.parseHTTPDate(dateStr) else {
-                request.logger.warning("Signature verification failed: invalid Date header format")
-                throw Self.genericFailure
-            }
-            let age = abs(Date().timeIntervalSince(date))
-            if age > 43200 {
-                request.logger.warning("Signature verification failed: Date header outside 12h window (age=\(Int(age))s)")
-                throw Self.genericFailure
-            }
+        // Enforce a minimum set of signed headers. draft-cavage-http-signatures
+        // leaves this up to the verifier; we follow Mastodon's practice (see
+        // app/lib/signed_request.rb in mastodon/mastodon): reject signatures
+        // that omit `date` outright, and reject POSTs that omit `digest`.
+        //
+        // Without `date` in the signed headers list, the Date header value
+        // is attacker-controlled and the 12-hour freshness window below
+        // cannot be trusted. Without `digest` signed on a POST, body
+        // integrity is not cryptographically bound to the signature even
+        // though we still compare Digest to the received body. The Misskey,
+        // Pleroma, and Akkoma senders all include both in practice, so
+        // this does not affect real-world federation compatibility.
+        let signedHeaderSet = Set(components.headers.map { $0.lowercased() })
+        guard signedHeaderSet.contains("date") else {
+            request.logger.warning("Signature verification failed: 'date' not in signed headers")
+            throw Self.genericFailure
+        }
+        if request.method == .POST, !signedHeaderSet.contains("digest") {
+            request.logger.warning("Signature verification failed: 'digest' not in signed headers on POST")
+            throw Self.genericFailure
+        }
+
+        // Validate Date header freshness.
+        guard let dateStr = request.headers.first(name: "Date") else {
+            request.logger.warning("Signature verification failed: missing Date header")
+            throw Self.genericFailure
+        }
+        guard let date = httpSignature.parseHTTPDate(dateStr) else {
+            request.logger.warning("Signature verification failed: invalid Date header format")
+            throw Self.genericFailure
+        }
+        let age = abs(Date().timeIntervalSince(date))
+        if age > 43200 {
+            request.logger.warning("Signature verification failed: Date header outside 12h window (age=\(Int(age))s)")
+            throw Self.genericFailure
         }
 
         // Collect the body from the stream. Middleware runs before Vapor's
