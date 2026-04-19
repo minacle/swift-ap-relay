@@ -15,7 +15,6 @@ package struct RelayConfiguration: Sendable {
     package let relayName: LocalizedString
     package let relayDescription: LocalizedString
     package let relayFooter: LocalizedString
-    package let allowedPrivateAddresses: [String]
     package let defaultQueueWorkerCount: Int?
     package let deliveryQueueWorkerCount: Int?
     package let instanceInfoQueueWorkerCount: Int?
@@ -38,7 +37,6 @@ package struct RelayConfiguration: Sendable {
         relayName: LocalizedString = LocalizedString([:]),
         relayDescription: LocalizedString = LocalizedString([:]),
         relayFooter: LocalizedString = LocalizedString([:]),
-        allowedPrivateAddresses: [String] = [],
         defaultQueueWorkerCount: Int? = nil,
         deliveryQueueWorkerCount: Int? = nil,
         instanceInfoQueueWorkerCount: Int? = nil
@@ -57,7 +55,6 @@ package struct RelayConfiguration: Sendable {
         self.relayName = relayName
         self.relayDescription = relayDescription
         self.relayFooter = relayFooter
-        self.allowedPrivateAddresses = allowedPrivateAddresses
         self.defaultQueueWorkerCount = defaultQueueWorkerCount
         self.deliveryQueueWorkerCount = deliveryQueueWorkerCount
         self.instanceInfoQueueWorkerCount = instanceInfoQueueWorkerCount

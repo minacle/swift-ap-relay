@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relay support for Like and EmojiReact activity types
 - Periodic instance info fetching for subscriber instances with software name/version, registration status, staff accounts, reachability, and favicon displayed on the homepage
 - `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 60 seconds, minimum: 60)
-- `ALLOWED_PRIVATE_ADDRESSES` environment variable to whitelist private IP CIDR ranges for internal/test cluster deployments
 - `DEFAULT_QUEUE_WORKER_COUNT`, `DELIVERY_QUEUE_WORKER_COUNT`, and `INSTANCE_INFO_QUEUE_WORKER_COUNT` environment variables for configurable queue worker counts
 - `SOURCE_REPOSITORY_URL` and `SOURCE_REPOSITORY_COMMIT_PATH` environment variables for configurable source repository links
 
@@ -38,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Validate outbound URLs in instance info fetch to prevent SSRF via crafted `link.href` (scheme, reserved hostname, and private IP literal checks)
+- Unified HTTP signature verification error responses on `/inbox` to prevent oracle/fingerprinting attacks; all failure modes (missing/malformed Signature, stale Date, Digest mismatch, actor fetch error, invalid signature) now return identical `401 Unauthorized "Signature verification failed"` with server-side warning logs for operator debugging
 
 ## [0.0.1] - 2026-04-12
 

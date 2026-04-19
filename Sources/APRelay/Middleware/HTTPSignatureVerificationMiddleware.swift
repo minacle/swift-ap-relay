@@ -11,25 +11,34 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
         to request: Request,
         chainingTo next: any AsyncResponder
     ) async throws -> Response {
+        // Error responses are deliberately uniform — a single `Signature verification failed`
+        // with 401 for every failure mode, so error shape cannot be used as an oracle
+        // to fingerprint which verification step a probe reached. Details are logged
+        // server-side only.
         guard let signatureHeader = request.headers.first(name: "Signature") else {
-            throw Abort(.unauthorized, reason: "Missing Signature header")
+            request.logger.warning("Signature verification failed: missing Signature header")
+            throw Self.genericFailure
         }
 
         guard let components = httpSignature.parseSignatureHeader(signatureHeader) else {
-            throw Abort(.badRequest, reason: "Invalid Signature header")
+            request.logger.warning("Signature verification failed: malformed Signature header")
+            throw Self.genericFailure
         }
 
         // Validate Date header if it is in the signed headers list.
         if components.headers.contains(where: { $0.lowercased() == "date" }) {
             guard let dateStr = request.headers.first(name: "Date") else {
-                throw Abort(.unauthorized, reason: "Missing Date header")
+                request.logger.warning("Signature verification failed: missing Date header")
+                throw Self.genericFailure
             }
             guard let date = httpSignature.parseHTTPDate(dateStr) else {
-                throw Abort(.unauthorized, reason: "Invalid Date header format")
+                request.logger.warning("Signature verification failed: invalid Date header format")
+                throw Self.genericFailure
             }
             let age = abs(Date().timeIntervalSince(date))
             if age > 43200 {
-                throw Abort(.unauthorized, reason: "Request date too far from current time")
+                request.logger.warning("Signature verification failed: Date header outside 12h window (age=\(Int(age))s)")
+                throw Self.genericFailure
             }
         }
 
@@ -42,16 +51,19 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
 
         if request.method == .POST {
             guard let digest = request.headers.first(name: "Digest") else {
-                throw Abort(.unauthorized, reason: "Missing Digest header")
+                request.logger.warning("Signature verification failed: missing Digest header on POST")
+                throw Self.genericFailure
             }
             let expectedPrefix = "SHA-256="
             guard digest.hasPrefix(expectedPrefix) else {
-                throw Abort(.unauthorized, reason: "Unsupported digest algorithm")
+                request.logger.warning("Signature verification failed: unsupported digest algorithm in Digest header")
+                throw Self.genericFailure
             }
             let expectedHash = String(digest.dropFirst(expectedPrefix.count))
             let actualHash = Data(SHA256.hash(data: bodyBuffer.readableBytesView)).base64EncodedString()
             if expectedHash != actualHash {
-                throw Abort(.unauthorized, reason: "Digest mismatch")
+                request.logger.warning("Signature verification failed: Digest mismatch")
+                throw Self.genericFailure
             }
         }
 
@@ -59,13 +71,23 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
         let keyID = components.keyID
         let actorURL = resolveActorURL(from: keyID)
 
-        let remoteActor = try await request.application.actorFetcher.fetchActor(
-            url: actorURL,
-            client: request.client
-        )
+        let remoteActor: RemoteActor
+        do {
+            remoteActor = try await request.application.actorFetcher.fetchActor(
+                url: actorURL,
+                client: request.client
+            )
+        } catch {
+            // Mask the underlying error (which may include the attacker-controlled
+            // actor URL) so that an unauthenticated caller cannot use error responses
+            // to confirm that the server reached a particular outbound URL.
+            request.logger.warning("Signature verification failed: actor fetch error for keyID=\(keyID): \(error)")
+            throw Self.genericFailure
+        }
 
         guard let publicKeyPEM = remoteActor.publicKey?.publicKeyPem else {
-            throw Abort(.unauthorized, reason: "Remote actor has no public key")
+            request.logger.warning("Signature verification failed: remote actor \(remoteActor.id) has no public key")
+            throw Self.genericFailure
         }
 
         // Verify the signature.
@@ -80,16 +102,23 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
             headerMap[name] = value
         }
 
-        let isValid = try httpSignature.verify(
-            method: method,
-            path: path,
-            requestHeaders: headerMap,
-            components: components,
-            publicKeyPEM: publicKeyPEM
-        )
+        let isValid: Bool
+        do {
+            isValid = try httpSignature.verify(
+                method: method,
+                path: path,
+                requestHeaders: headerMap,
+                components: components,
+                publicKeyPEM: publicKeyPEM
+            )
+        } catch {
+            request.logger.warning("Signature verification failed: verify threw for keyID=\(keyID): \(error)")
+            throw Self.genericFailure
+        }
 
         guard isValid else {
-            throw Abort(.unauthorized, reason: "Invalid HTTP signature")
+            request.logger.warning("Signature verification failed: signature invalid for keyID=\(keyID)")
+            throw Self.genericFailure
         }
 
         // Store verified actor info for downstream handlers.
@@ -102,6 +131,8 @@ struct HTTPSignatureVerificationMiddleware: AsyncMiddleware {
 
         return try await next.respond(to: request)
     }
+
+    private static let genericFailure = Abort(.unauthorized, reason: "Signature verification failed")
 
     /// Resolves the actor URL from a key ID.
     ///

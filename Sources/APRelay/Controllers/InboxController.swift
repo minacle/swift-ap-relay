@@ -21,7 +21,8 @@ struct InboxController: RouteCollection {
         do {
             activity = try JSONDecoder().decode(APActivity.self, from: body)
         } catch {
-            throw Abort(.badRequest, reason: "Invalid activity JSON: \(error)")
+            req.logger.warning("Inbox rejected invalid activity JSON: \(error)")
+            throw Abort(.badRequest, reason: "Invalid activity")
         }
 
         // Validate that the activity actor's domain matches the verified signer.
