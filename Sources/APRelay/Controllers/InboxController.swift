@@ -289,7 +289,7 @@ struct InboxController: RouteCollection {
                 object: .uri(objectURI),
                 to: .single("https://www.w3.org/ns/activitystreams#Public"),
                 cc: nil,
-                published: ISO8601DateFormatter().string(from: Date())
+                published: Date.ISO8601FormatStyle.apRelay.format(Date())
             )
             payload = try JSONEncoder.apRelay.encode(announce)
         default:

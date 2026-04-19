@@ -40,7 +40,7 @@ struct AcceptJob: AsyncJob {
             )),
             to: .single(payload.followerActorID),
             cc: nil,
-            published: ISO8601DateFormatter().string(from: Date())
+            published: Date.ISO8601FormatStyle.apRelay.format(Date())
         )
 
         let data = try JSONEncoder.apRelay.encode(accept)
