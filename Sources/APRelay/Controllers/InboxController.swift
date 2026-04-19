@@ -129,13 +129,17 @@ struct InboxController: RouteCollection {
                 existing.outboundFollowActivityID = nil
             }
 
+            // Rejected state is sticky: once an admin rejects a subscriber,
+            // a repeat Follow from the same domain must not silently
+            // reinstate it. Reinstatement requires an explicit admin accept
+            // via the admin API.
+            if existing.state == .rejected {
+                req.logger.notice("Ignoring Follow from rejected subscriber: \(actorDomain)")
+            }
             existing.actorID = activity.actor
             existing.inboxURL = inboxURL
             existing.followActivityID = activity.id
             existing.followObjectURI = objectURI
-            if existing.state == .rejected {
-                existing.state = initialState
-            }
             effectiveState = existing.state
 
             // LitePub: if following relay actor directly and accepted, prepare outbound follow.

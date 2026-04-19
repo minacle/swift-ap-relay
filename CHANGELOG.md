@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Unified HTTP signature verification error responses on `/inbox` to prevent oracle/fingerprinting attacks; all failure modes (missing/malformed Signature, stale Date, Digest mismatch, actor fetch error, invalid signature) now return identical `401 Unauthorized "Signature verification failed"` with server-side warning logs for operator debugging
+- Rejected subscriber state is now sticky: a repeat Follow from a rejected domain no longer silently reinstates the subscriber (previously auto-accept mode reset `.rejected` → `.accepted`, making admin rejections effectively one-time deletes)
 
 ## [0.0.1] - 2026-04-12
 

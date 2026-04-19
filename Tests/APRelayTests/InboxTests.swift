@@ -85,6 +85,65 @@ struct InboxTests {
         }
     }
 
+    @Test("Follow from rejected subscriber keeps rejected state (auto-accept mode)")
+    func followRejectedSubscriberStaysRejected() async throws {
+        try await withApp(configure: testConfigure) { app in
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .rejected,
+                followActivityID: "https://remote.example/activities/follow-previous",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeFollowActivity()
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
+            #expect(subscriber?.state == .rejected)
+            // followActivityID may be updated for audit, but state must stick.
+        }
+    }
+
+    @Test("Follow from rejected subscriber keeps rejected state (manual accept mode)")
+    func followRejectedSubscriberStaysRejectedManualAccept() async throws {
+        try await withApp(configure: testConfigureManualAccept) { app in
+            let sub = Subscriber(
+                domain: TestSigning.testActorDomain,
+                inboxURL: TestSigning.testInboxURL,
+                actorID: TestSigning.testActorID,
+                state: .rejected,
+                followActivityID: "https://remote.example/activities/follow-previous",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            try await app.repository.saveSubscriber(sub)
+
+            let activity = TestSigning.makeFollowActivity()
+            let (headers, body) = try TestSigning.signedRequest(activity: activity)
+
+            try await app.testing().test(.POST, "inbox", headers: headers, body: body) {
+                res async in
+                #expect(res.status == .accepted)
+            }
+
+            let subscriber = try await app.repository.getSubscriber(
+                domain: TestSigning.testActorDomain
+            )
+            #expect(subscriber?.state == .rejected)
+        }
+    }
+
     // MARK: - Undo
 
     @Test("Undo with nested Follow deletes subscriber")
