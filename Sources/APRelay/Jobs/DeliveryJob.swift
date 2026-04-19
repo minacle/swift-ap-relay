@@ -43,14 +43,14 @@ struct DeliveryJob: AsyncJob {
     }
 
     func error(_ context: QueueContext, _ error: any Error, _ payload: DeliveryPayload) async throws {
-        if let deliveryError = error as? DeliveryError, !deliveryError.isRetryable {
-            context.logger.warning("Non-retryable error for \(payload.inboxURL): \(error)")
-        } else {
-            context.logger.warning("Delivery failed for \(payload.inboxURL): \(error)")
-        }
+        context.logger.warning("Delivery failed for \(payload.inboxURL): \(error)")
         Counter(
             label: "relay_delivery_total",
             dimensions: [("result", "failure")]
         ).increment()
+    }
+
+    func nextRetryIn(attempt: Int) -> Int {
+        Self.exponentialBackoffSeconds(attempt: attempt, base: 60, maxInterval: 30 * 60)
     }
 }

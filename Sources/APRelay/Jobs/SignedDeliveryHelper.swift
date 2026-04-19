@@ -56,16 +56,4 @@ enum SignedDeliveryHelper {
 enum DeliveryError: Error {
     case invalidURL(String)
     case httpError(UInt, String)
-
-    var isRetryable: Bool {
-        switch self {
-        case .invalidURL:
-            return false
-        case .httpError(let code, _):
-            if (400...499).contains(code) {
-                return [401, 408, 429].contains(code)
-            }
-            return true
-        }
-    }
 }

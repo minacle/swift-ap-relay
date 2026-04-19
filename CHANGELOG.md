@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prometheus metrics endpoint moved to a dedicated server controlled by `METRICS_BIND` environment variable
 - Delivery jobs now run on a dedicated queue separate from the default job queue
 - Instance info checks now run on a dedicated `instanceInfo` queue separate from the default job queue, and double as a reachability heartbeat at a default 60-second interval
-- Failed instance info checks preserve last-known software/version/staff/favicon metadata while marking the instance unreachable, and back off exponentially (60s, 120s, 240s, 480s, 960s, capped at 30 minutes) before the next attempt
+- Failed instance info checks preserve last-known software/version/staff/favicon metadata while marking the instance unreachable, and back off exponentially (base 60s doubling per failure, capped at 30 minutes) with equal jitter before the next attempt
+- Delivery retries now back off exponentially (base 60s doubling per attempt, capped at 30 minutes) with equal jitter instead of retrying immediately
+- `DeliveryError.isRetryable` classification removed; retries are uniformly governed by `maxRetryCount` and the new backoff
 - Instance info cache TTL is now a fixed 1 hour, decoupled from the check interval
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
 

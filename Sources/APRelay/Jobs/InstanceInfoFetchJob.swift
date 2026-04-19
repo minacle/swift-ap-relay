@@ -33,7 +33,7 @@ struct InstanceInfoFetchJob: AsyncJob {
         // Preserve last-known metadata; flip reachability and accumulate backoff.
         let existing = try? await cache.getInstanceInfo(domain: payload.domain)
         let failures = (existing?.consecutiveFailures ?? 0) + 1
-        let backoff = computeInstanceInfoBackoffSeconds(failures: failures)
+        let backoff = Self.exponentialBackoffSeconds(attempt: failures, base: 60, maxInterval: 30 * 60)
         let nextAttemptAt = now.addingTimeInterval(TimeInterval(backoff))
 
         let updated = InstanceInfo(
@@ -50,24 +50,6 @@ struct InstanceInfoFetchJob: AsyncJob {
         try? await cache.setInstanceInfo(domain: payload.domain, info: updated)
         context.logger.warning("Instance info check failed for \(payload.domain) (failures=\(failures), nextAttemptAt=\(nextAttemptAt)): \(error)")
     }
-}
-
-// MARK: - Backoff
-
-/// Base interval for exponential backoff between failed heartbeat attempts.
-private let instanceInfoBackoffBaseSeconds: Int = 60
-/// Maximum backoff interval between failed heartbeat attempts.
-private let instanceInfoBackoffMaxSeconds: Int = 30 * 60
-
-/// Returns the number of seconds to wait before the next instance info attempt
-/// after `failures` consecutive failures. Produces 60, 120, 240, 480, 960, 1800,
-/// 1800, ... (capped at 30 minutes).
-func computeInstanceInfoBackoffSeconds(failures: Int) -> Int {
-    guard failures > 0 else { return 0 }
-    // Cap shift to avoid overflow; any reasonable `failures` already saturates the max.
-    let shift = min(failures - 1, 30)
-    let raw = instanceInfoBackoffBaseSeconds << shift
-    return min(raw, instanceInfoBackoffMaxSeconds)
 }
 
 // MARK: - Instance Info Fetching
