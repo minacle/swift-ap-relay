@@ -69,7 +69,7 @@ struct AdminAPIController: RouteCollection {
             )
         }
 
-        try await req.queue.dispatch(
+        try await req.queues(.instanceInfo).dispatch(
             InstanceInfoFetchJob.self,
             InstanceInfoFetchPayload(domain: domain),
             maxRetryCount: 0

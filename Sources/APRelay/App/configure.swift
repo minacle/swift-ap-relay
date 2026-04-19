@@ -75,6 +75,12 @@ func configure(_ app: Application) async throws {
             )
             try app.queues.startInProcessJobs(on: deliveryQueue)
 
+            let instanceInfoQueue = QueueName(
+                string: QueueName.instanceInfo.string,
+                workerCount: config.instanceInfoQueueWorkerCount
+            )
+            try app.queues.startInProcessJobs(on: instanceInfoQueue)
+
             try app.queues.startScheduledJobs()
         }
     }
@@ -99,8 +105,7 @@ func configure(_ app: Application) async throws {
 // MARK: - App Lifecycle Bootstrap
 
 /// Unified lifecycle handler that runs after Redis connection pools are ready.
-/// Handles signing key initialization, metrics server startup, and subscriber
-/// instance info fetching.
+/// Handles signing key initialization and metrics server startup.
 private struct AppBootstrap: LifecycleHandler {
     func didBootAsync(_ application: Application) async throws {
         // 1. Initialize signing key.
@@ -132,18 +137,6 @@ private struct AppBootstrap: LifecycleHandler {
             application.storage[MetricsAppKey.self] = metricsApp
 
             application.logger.info("Metrics server started on \(hostname):\(port)")
-        }
-
-        // 3. Fetch instance info for existing subscribers at boot.
-        if application.environment != .testing {
-            let subscribers = try await application.repository.getAllSubscribers(state: .accepted)
-            for subscriber in subscribers {
-                try await application.queues.queue.dispatch(
-                    InstanceInfoFetchJob.self,
-                    InstanceInfoFetchPayload(domain: subscriber.domain),
-                    maxRetryCount: 0
-                )
-            }
         }
     }
 

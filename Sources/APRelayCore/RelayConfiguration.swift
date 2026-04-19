@@ -18,6 +18,7 @@ package struct RelayConfiguration: Sendable {
     package let allowedPrivateAddresses: [String]
     package let defaultQueueWorkerCount: Int?
     package let deliveryQueueWorkerCount: Int?
+    package let instanceInfoQueueWorkerCount: Int?
 
     package var actorURL: String {
         "\(baseURL)/actor"
@@ -33,13 +34,14 @@ package struct RelayConfiguration: Sendable {
         adminToken: String = "",
         manualAccept: Bool = false,
         restrictedMode: Bool = false,
-        instanceInfoCheckInterval: Int = 300,
+        instanceInfoCheckInterval: Int = 60,
         relayName: LocalizedString = LocalizedString([:]),
         relayDescription: LocalizedString = LocalizedString([:]),
         relayFooter: LocalizedString = LocalizedString([:]),
         allowedPrivateAddresses: [String] = [],
         defaultQueueWorkerCount: Int? = nil,
-        deliveryQueueWorkerCount: Int? = nil
+        deliveryQueueWorkerCount: Int? = nil,
+        instanceInfoQueueWorkerCount: Int? = nil
     ) {
         self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         if let url = URL(string: self.baseURL) {
@@ -58,5 +60,6 @@ package struct RelayConfiguration: Sendable {
         self.allowedPrivateAddresses = allowedPrivateAddresses
         self.defaultQueueWorkerCount = defaultQueueWorkerCount
         self.deliveryQueueWorkerCount = deliveryQueueWorkerCount
+        self.instanceInfoQueueWorkerCount = instanceInfoQueueWorkerCount
     }
 }

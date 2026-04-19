@@ -28,13 +28,46 @@ struct InstanceInfoFetchJob: AsyncJob {
 
     func error(_ context: QueueContext, _ error: any Error, _ payload: InstanceInfoFetchPayload) async throws {
         let cache = context.application.instanceInfoCache
-        let failedInfo = InstanceInfo(
+        let now = Date()
+
+        // Preserve last-known metadata; flip reachability and accumulate backoff.
+        let existing = try? await cache.getInstanceInfo(domain: payload.domain)
+        let failures = (existing?.consecutiveFailures ?? 0) + 1
+        let backoff = computeInstanceInfoBackoffSeconds(failures: failures)
+        let nextAttemptAt = now.addingTimeInterval(TimeInterval(backoff))
+
+        let updated = InstanceInfo(
+            softwareName: existing?.softwareName,
+            softwareVersion: existing?.softwareVersion,
+            openRegistrations: existing?.openRegistrations,
+            staffAccounts: existing?.staffAccounts,
+            faviconURL: existing?.faviconURL,
             isReachable: false,
-            lastCheckedAt: Date()
+            lastCheckedAt: now,
+            consecutiveFailures: failures,
+            nextAttemptAt: nextAttemptAt
         )
-        try? await cache.setInstanceInfo(domain: payload.domain, info: failedInfo)
-        context.logger.warning("Instance info check failed for \(payload.domain): \(error)")
+        try? await cache.setInstanceInfo(domain: payload.domain, info: updated)
+        context.logger.warning("Instance info check failed for \(payload.domain) (failures=\(failures), nextAttemptAt=\(nextAttemptAt)): \(error)")
     }
+}
+
+// MARK: - Backoff
+
+/// Base interval for exponential backoff between failed heartbeat attempts.
+private let instanceInfoBackoffBaseSeconds: Int = 60
+/// Maximum backoff interval between failed heartbeat attempts.
+private let instanceInfoBackoffMaxSeconds: Int = 30 * 60
+
+/// Returns the number of seconds to wait before the next instance info attempt
+/// after `failures` consecutive failures. Produces 60, 120, 240, 480, 960, 1800,
+/// 1800, ... (capped at 30 minutes).
+func computeInstanceInfoBackoffSeconds(failures: Int) -> Int {
+    guard failures > 0 else { return 0 }
+    // Cap shift to avoid overflow; any reasonable `failures` already saturates the max.
+    let shift = min(failures - 1, 30)
+    let raw = instanceInfoBackoffBaseSeconds << shift
+    return min(raw, instanceInfoBackoffMaxSeconds)
 }
 
 // MARK: - Instance Info Fetching
@@ -96,7 +129,9 @@ private func fetchInstanceInfo(domain: String, client: any Client, allowedPrivat
         staffAccounts: safeStaffAccounts,
         faviconURL: faviconURL,
         isReachable: true,
-        lastCheckedAt: Date()
+        lastCheckedAt: Date(),
+        consecutiveFailures: 0,
+        nextAttemptAt: nil
     )
 }
 

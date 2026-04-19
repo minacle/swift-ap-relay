@@ -11,13 +11,14 @@ func makeRelayConfiguration() throws -> RelayConfiguration {
         adminToken: Environment.get("ADMIN_TOKEN") ?? "",
         manualAccept: Environment.get("MANUAL_ACCEPT") == "true",
         restrictedMode: Environment.get("RESTRICTED_MODE") == "true",
-        instanceInfoCheckInterval: max(Environment.get("INSTANCE_INFO_CHECK_INTERVAL").flatMap(Int.init) ?? 300, 60),
+        instanceInfoCheckInterval: max(Environment.get("INSTANCE_INFO_CHECK_INTERVAL").flatMap(Int.init) ?? 60, 60),
         relayName: buildLocalizedString(envPrefix: "RELAY_NAME"),
         relayDescription: buildLocalizedString(envPrefix: "RELAY_DESCRIPTION"),
         relayFooter: buildLocalizedString(envPrefix: "RELAY_FOOTER"),
         allowedPrivateAddresses: parseCommaSeparatedEnv("ALLOWED_PRIVATE_ADDRESSES"),
         defaultQueueWorkerCount: Environment.get("DEFAULT_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil },
-        deliveryQueueWorkerCount: Environment.get("DELIVERY_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil }
+        deliveryQueueWorkerCount: Environment.get("DELIVERY_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil },
+        instanceInfoQueueWorkerCount: Environment.get("INSTANCE_INFO_QUEUE_WORKER_COUNT").flatMap(Int.init).flatMap { $0 > 0 ? $0 : nil }
     )
 }
 

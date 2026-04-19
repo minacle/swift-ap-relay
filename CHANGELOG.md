@@ -13,9 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relay support for Move, Add, Remove, and Undo (non-Follow) activity types
 - Relay support for Like and EmojiReact activity types
 - Periodic instance info fetching for subscriber instances with software name/version, registration status, staff accounts, reachability, and favicon displayed on the homepage
-- `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 300 seconds, minimum: 60)
+- `INSTANCE_INFO_CHECK_INTERVAL` environment variable to configure instance info check frequency (default: 60 seconds, minimum: 60)
 - `ALLOWED_PRIVATE_ADDRESSES` environment variable to whitelist private IP CIDR ranges for internal/test cluster deployments
-- `DEFAULT_QUEUE_WORKER_COUNT` and `DELIVERY_QUEUE_WORKER_COUNT` environment variables for configurable queue worker counts
+- `DEFAULT_QUEUE_WORKER_COUNT`, `DELIVERY_QUEUE_WORKER_COUNT`, and `INSTANCE_INFO_QUEUE_WORKER_COUNT` environment variables for configurable queue worker counts
 - `SOURCE_REPOSITORY_URL` and `SOURCE_REPOSITORY_COMMIT_PATH` environment variables for configurable source repository links
 
 ### Changed
@@ -23,12 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Homepage instance list now displays subscribers in join order instead of alphabetical order
 - Prometheus metrics endpoint moved to a dedicated server controlled by `METRICS_BIND` environment variable
 - Delivery jobs now run on a dedicated queue separate from the default job queue
+- Instance info checks now run on a dedicated `instanceInfo` queue separate from the default job queue, and double as a reachability heartbeat at a default 60-second interval
+- Failed instance info checks preserve last-known software/version/staff/favicon metadata while marking the instance unreachable, and back off exponentially (60s, 120s, 240s, 480s, 960s, capped at 30 minutes) before the next attempt
+- Instance info cache TTL is now a fixed 1 hour, decoupled from the check interval
 - Japanese locale: use 登録 (registration) instead of 購読 (subscription) for more natural relay terminology
 
 ### Fixed
 
 - NodeInfo response now includes required `services` field and uses free-form `metadata` per NodeInfo 2.1 schema
-- Homepage now shows subscriber instance details immediately after server boot instead of waiting for the first scheduled check
 - InstanceInfoFetchJob error logs now include the failing domain name for diagnosis
 - Large ActivityPub payloads (e.g. long posts, many mentions) now accepted instead of returning 413 Payload Too Large
 

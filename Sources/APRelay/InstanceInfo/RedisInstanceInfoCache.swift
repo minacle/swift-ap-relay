@@ -6,6 +6,11 @@ import Vapor
 ///
 /// Stores each domain's instance info as a JSON string under `instanceinfo:{domain}`.
 struct RedisInstanceInfoCache: InstanceInfoCaching, Sendable {
+    /// Fixed TTL for cached entries. Decoupled from the check interval so that a
+    /// tighter heartbeat cadence does not shrink the safety-net lifetime used to
+    /// evict stale data for departed or long-offline instances.
+    static let defaultTTLSeconds: Int = 3600
+
     let redis: any RedisClient & Sendable
     let ttlSeconds: Int
 

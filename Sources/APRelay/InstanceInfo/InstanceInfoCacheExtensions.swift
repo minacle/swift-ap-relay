@@ -15,7 +15,7 @@ extension Application {
         if let override = storage[InstanceInfoCacheOverrideKey.self] {
             return override
         }
-        return RedisInstanceInfoCache(redis: self.redis, ttlSeconds: self.relayConfig.instanceInfoCheckInterval * 3)
+        return RedisInstanceInfoCache(redis: self.redis, ttlSeconds: RedisInstanceInfoCache.defaultTTLSeconds)
     }
 
     /// Override the instance info cache (used by tests to inject a mock).

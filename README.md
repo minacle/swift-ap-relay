@@ -149,9 +149,10 @@ docker pull ghcr.io/sinoru/swift-ap-relay:latest
 | `SOURCE_REPOSITORY_URL` | Source repository URL for NodeInfo and homepage links | `https://github.com/sinoru/swift-ap-relay` |
 | `SOURCE_REPOSITORY_COMMIT_PATH` | URL path prefix for commit links (e.g. `/tree/`, `/commit/`, `/-/commit/`) | `/tree/` |
 | `METRICS_BIND` | Bind address for the Prometheus metrics server (e.g. `0.0.0.0:9090`). Disabled when unset. | (disabled) |
-| `INSTANCE_INFO_CHECK_INTERVAL` | Interval in seconds between periodic instance info checks | `300` (minimum `60`) |
+| `INSTANCE_INFO_CHECK_INTERVAL` | Interval in seconds between periodic instance info checks. Also serves as a reachability heartbeat; failed checks back off exponentially up to 30 minutes. | `60` (minimum `60`) |
 | `DEFAULT_QUEUE_WORKER_COUNT` | Number of workers for the default job queue | System CPU core count |
 | `DELIVERY_QUEUE_WORKER_COUNT` | Number of workers for the delivery job queue | System CPU core count |
+| `INSTANCE_INFO_QUEUE_WORKER_COUNT` | Number of workers for the instance info job queue | System CPU core count |
 | `LOG_LEVEL` | Logging level (`trace`, `debug`, `info`, `notice`, `warning`, `error`, `critical`) | `notice` (production) / `info` (development) |
 
 ### Localized Environment Variables
