@@ -97,7 +97,7 @@ enum TestSigning {
             object: .uri("https://remote.example/notes/\(UUID().uuidString)"),
             to: .single("https://www.w3.org/ns/activitystreams#Public"),
             cc: nil,
-            published: ISO8601DateFormatter().string(from: Date())
+            published: Date.ISO8601FormatStyle.apRelay.format(Date())
         )
     }
 
