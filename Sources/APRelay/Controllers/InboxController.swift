@@ -218,26 +218,36 @@ struct InboxController: RouteCollection {
     ) async throws {
         guard let object = activity.object else { return }
 
-        let innerType: String?
-        switch object {
-        case .activity(let inner):
-            innerType = inner.type
-        case .object(let inner):
-            innerType = inner.type
-        case .uri:
-            innerType = "Follow"
-        }
-
-        if innerType == "Follow" {
+        switch undoFollowTarget(from: object) {
+        case .follow(let followID, let followActor):
             let actorDomain = extractDomain(from: activity.actor) ?? activity.actor
 
             if let subscriber = try await req.repository.getSubscriber(domain: actorDomain) {
+                guard let followID else {
+                    req.logger.info("Undo Follow from \(actorDomain) has no Follow ID; ignoring")
+                    return
+                }
+
+                guard followID == subscriber.followActivityID else {
+                    req.logger.info(
+                        "Undo Follow from \(actorDomain) references \(followID), not current Follow \(subscriber.followActivityID); ignoring"
+                    )
+                    return
+                }
+
+                if let followActor, followActor != subscriber.actorID {
+                    req.logger.info(
+                        "Undo Follow actor \(followActor) does not match subscriber actor \(subscriber.actorID); ignoring"
+                    )
+                    return
+                }
+
                 // LitePub: if we had an outbound Follow, send Undo Follow back.
                 try await subscriber.dispatchUndoFollowIfNeeded(on: req.queue)
                 try await req.repository.deleteSubscriber(domain: actorDomain)
                 req.logger.notice("Removed subscriber: \(actorDomain)")
             }
-        } else {
+        case .notFollow:
             try await handleActivity(activity: activity, body: body, req: req)
         }
     }
@@ -410,5 +420,23 @@ struct InboxController: RouteCollection {
         uri == "https://www.w3.org/ns/activitystreams#Public"
             || uri == "as:Public"
             || uri == "Public"
+    }
+
+    private enum UndoFollowTarget {
+        case follow(id: String?, actor: String?)
+        case notFollow
+    }
+
+    private func undoFollowTarget(from object: APObject) -> UndoFollowTarget {
+        switch object {
+        case .activity(let inner):
+            guard inner.type == "Follow" else { return .notFollow }
+            return .follow(id: inner.id, actor: inner.actor)
+        case .object(let inner):
+            guard inner.type == "Follow" else { return .notFollow }
+            return .follow(id: inner.id, actor: inner.actor)
+        case .uri(let uri):
+            return .follow(id: uri, actor: nil)
+        }
     }
 }

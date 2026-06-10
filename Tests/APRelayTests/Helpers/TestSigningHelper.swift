@@ -55,6 +55,7 @@ enum TestSigning {
         id: String = "https://remote.example/activities/\(UUID().uuidString)",
         actor: String = testActorID,
         followID: String = "https://remote.example/activities/follow-1",
+        followActor: String? = nil,
         objectAsURI: Bool = false
     ) -> APActivity {
         let object: APObject
@@ -65,7 +66,7 @@ enum TestSigning {
                 context: nil,
                 id: followID,
                 type: "Follow",
-                actor: actor,
+                actor: followActor ?? actor,
                 object: .uri("https://www.w3.org/ns/activitystreams#Public"),
                 to: nil,
                 cc: nil,
